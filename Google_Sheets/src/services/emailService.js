@@ -1,6 +1,6 @@
 /**
  * @file volunteerEmailService.js
- * @description Service d'envoi d'emails aux bénévoles
+ * @description Service d'envoi d'emails aux bénévoles avec template HTML
  */
 
 /**
@@ -35,9 +35,10 @@ function sendAvailabilityRequest(volunteerId, eventDetails) {
         }
 
         const config = getVolunteerScriptConfig();
-        const confirmUrl = `${config.webAppUrl}?action=confirmAvailability&volunteerId=${volunteerId}&eventId=${eventDetails.eventId}&token=${config.volunteerApiKey}`;
+        const confirmYesUrl = `${config.webAppUrl}?action=confirmAvailability&volunteerId=${volunteerId}&eventId=${eventDetails.eventId}&response=yes&token=${config.volunteerApiKey}`;
+        const confirmNoUrl = `${config.webAppUrl}?action=confirmAvailability&volunteerId=${volunteerId}&eventId=${eventDetails.eventId}&response=no&token=${config.volunteerApiKey}`;
 
-        const htmlBody = generateAvailabilityEmailHtml(volunteer, eventDetails, confirmUrl);
+        const htmlBody = generateAvailabilityEmailHtml(volunteer, eventDetails, confirmYesUrl, confirmNoUrl);
 
         MailApp.sendEmail({
             to: volunteer.email,
@@ -62,93 +63,87 @@ function sendAvailabilityRequest(volunteerId, eventDetails) {
 }
 
 /**
- * Génère le HTML de l'email de demande de disponibilité
+ * Génère le HTML de l'email de demande de disponibilité à partir du template
+ * @param {Object} volunteer - Données du bénévole
+ * @param {Object} eventDetails - Détails de l'événement
+ * @param {string} confirmYesUrl - URL de confirmation positive
+ * @param {string} confirmNoUrl - URL de confirmation négative
+ * @returns {string} HTML de l'email
  */
-function generateAvailabilityEmailHtml(volunteer, eventDetails, confirmUrl) {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background: #f9f9f9; }
-        .header { background: #1a73e8; color: white; padding: 20px; text-align: center; }
-        .content { padding: 30px; background: white; }
-        .event-details { background: #f0f4ff; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        .detail-row { padding: 8px 0; border-bottom: 1px solid #ddd; }
-        .detail-label { font-weight: bold; color: #555; }
-        .button-container { text-align: center; margin: 30px 0; }
-        .button { 
-            display: inline-block; 
-            padding: 14px 28px; 
-            background: #1a73e8; 
-            color: white; 
-            text-decoration: none; 
-            border-radius: 6px; 
-            font-weight: bold; 
-        }
-        .footer { padding: 20px; text-align: center; color: #666; font-size: 12px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>🔔 Demande de Disponibilité</h2>
-        </div>
-        <div class="content">
-            <p>Bonjour ${volunteer.prenom} ${volunteer.nom},</p>
-            
-            <p>Nous organisons un événement et souhaiterions savoir si vous êtes disponible pour participer.</p>
-            
-            <div class="event-details">
-                <h3 style="margin-top: 0;">📅 Détails de l'événement</h3>
-                <div class="detail-row">
-                    <span class="detail-label">Titre:</span> ${eventDetails.titre}
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Date:</span> ${eventDetails.date}
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Horaire:</span> ${eventDetails.horaire}
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Lieu:</span> ${eventDetails.lieu}
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Type:</span> ${eventDetails.type}
-                </div>
-                ${eventDetails.description ? `
-                <div style="margin-top: 15px;">
-                    <span class="detail-label">Description:</span>
-                    <p style="margin: 5px 0;">${eventDetails.description}</p>
-                </div>
-                ` : ''}
+function generateAvailabilityEmailHtml(volunteer, eventDetails, confirmYesUrl, confirmNoUrl) {
+    // Charger le template
+    let template = HtmlService.createHtmlOutputFromFile('views/email/emailAvailabilityTemplate').getContent();
+
+    // Formatage de la date
+    const dateFormatted = formatEventDate(eventDetails.date);
+
+    // Section description (optionnelle)
+    let descriptionSection = '';
+    if (eventDetails.description && eventDetails.description.trim() !== '') {
+        descriptionSection = `
+            <div class="description-box">
+                <div class="description-label">Description</div>
+                <p style="margin: 5px 0; line-height: 1.6;">${escapeHtml(eventDetails.description)}</p>
             </div>
-            
-            <p><strong>Êtes-vous disponible pour cet événement ?</strong></p>
-            
-            <div class="button-container">
-                <a href="${confirmUrl}&response=yes" class="button" style="background: #34a853;">
-                    ✅ Oui, je suis disponible
-                </a>
-                <br><br>
-                <a href="${confirmUrl}&response=no" class="button" style="background: #ea4335;">
-                    ❌ Non, je ne suis pas disponible
-                </a>
-            </div>
-            
-            <p style="color: #666; font-size: 14px;">
-                💡 Cliquez sur le bouton correspondant à votre réponse pour confirmer votre disponibilité.
-            </p>
-        </div>
-        <div class="footer">
-            <p>👥 Système de Gestion des Bénévoles</p>
-            <p>Si vous avez des questions, n'hésitez pas à nous contacter.</p>
-        </div>
-    </div>
-</body>
-</html>`;
+        `;
+    }
+
+    // Remplacement des placeholders
+    template = template.replace('{{PRENOM}}', escapeHtml(volunteer.prenom));
+    template = template.replace('{{NOM}}', escapeHtml(volunteer.nom));
+    template = template.replace('{{TITRE}}', escapeHtml(eventDetails.titre));
+    template = template.replace('{{DATE}}', escapeHtml(dateFormatted));
+    template = template.replace('{{HORAIRE}}', escapeHtml(eventDetails.horaire));
+    template = template.replace('{{LIEU}}', escapeHtml(eventDetails.lieu));
+    template = template.replace('{{TYPE}}', escapeHtml(eventDetails.type));
+    template = template.replace('{{DESCRIPTION_SECTION}}', descriptionSection);
+    template = template.replace('{{CONFIRM_YES_URL}}', confirmYesUrl);
+    template = template.replace('{{CONFIRM_NO_URL}}', confirmNoUrl);
+
+    return template;
+}
+
+/**
+ * Formate une date d'événement pour l'affichage
+ * @param {string} dateString - Date au format YYYY-MM-DD
+ * @returns {string} Date formatée
+ */
+function formatEventDate(dateString) {
+    if (!dateString) return '';
+
+    try {
+        const date = new Date(dateString);
+        const options = {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        };
+
+        return date.toLocaleDateString('fr-FR', options);
+    } catch (error) {
+        logVolunteerWarning('Erreur formatage date', error);
+        return dateString;
+    }
+}
+
+/**
+ * Échappe les caractères HTML pour éviter l'injection
+ * @param {string} text - Texte à échapper
+ * @returns {string} Texte échappé
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+
+    return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
 /**
@@ -183,6 +178,14 @@ function sendBulkAvailabilityRequests(volunteerIds, eventDetails) {
 
     logVolunteerInfo('Envoi bulk terminé', results);
 
+    // Notification admin
+    if (results.sent > 0) {
+        notifyVolunteerAdmin(
+            'Demandes de disponibilité envoyées',
+            `Événement: ${eventDetails.titre}\nDate: ${eventDetails.date}\n\nEnvoyés: ${results.sent}\nÉchecs: ${results.failed}`
+        );
+    }
+
     return results;
 }
 
@@ -211,9 +214,7 @@ function handleAvailabilityResponse(volunteerId, eventId, response) {
             };
         }
 
-        // Ici, vous pouvez enregistrer la réponse dans une feuille dédiée
-        // ou l'intégrer à votre système de gestion d'événements
-
+        // Enregistrer la réponse (vous pouvez l'intégrer à votre système de gestion d'événements)
         logVolunteerInfo(`Réponse disponibilité: ${volunteerId} - Event ${eventId} - ${response}`);
 
         const message = response === 'yes'
@@ -236,6 +237,89 @@ function handleAvailabilityResponse(volunteerId, eventId, response) {
         return {
             success: false,
             message: error.toString()
+        };
+    }
+}
+
+/**
+ * Envoie un email de rappel à un bénévole
+ * @param {string} volunteerId - ID du bénévole
+ * @param {Object} eventDetails - Détails de l'événement
+ * @returns {Object} {success: boolean, error?: string}
+ */
+function sendReminderEmail(volunteerId, eventDetails) {
+    try {
+        const volunteer = getVolunteerById(volunteerId);
+
+        if (!volunteer || !volunteer.email) {
+            return {
+                success: false,
+                error: 'Bénévole ou email introuvable'
+            };
+        }
+
+        const dateFormatted = formatEventDate(eventDetails.date);
+
+        const htmlBody = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: #ff9800; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
+                    .content { background: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                    .event-box { background: #fff3e0; padding: 15px; border-left: 4px solid #ff9800; margin: 20px 0; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h2>⏰ Rappel - Événement à venir</h2>
+                    </div>
+                    <div class="content">
+                        <p>Bonjour ${escapeHtml(volunteer.prenom)},</p>
+                        
+                        <p>Nous vous rappelons que vous êtes inscrit pour l'événement suivant :</p>
+                        
+                        <div class="event-box">
+                            <strong>${escapeHtml(eventDetails.titre)}</strong><br>
+                            📅 ${escapeHtml(dateFormatted)}<br>
+                            🕐 ${escapeHtml(eventDetails.horaire)}<br>
+                            📍 ${escapeHtml(eventDetails.lieu)}
+                        </div>
+                        
+                        <p>Nous comptons sur votre présence. En cas d'empêchement, merci de nous prévenir au plus vite.</p>
+                        
+                        <p>À bientôt !</p>
+                    </div>
+                    <div class="footer">
+                        <p>👥 Système de Gestion des Bénévoles</p>
+                    </div>
+                </div>
+            </body>
+            </html>`;
+
+        MailApp.sendEmail({
+            to: volunteer.email,
+            subject: `⏰ Rappel - ${eventDetails.titre}`,
+            htmlBody: htmlBody,
+            name: 'Gestion des Bénévoles'
+        });
+
+        logVolunteerInfo(`Email de rappel envoyé à ${volunteerId}`);
+
+        return {
+            success: true
+        };
+
+    } catch (error) {
+        logVolunteerError(`Échec envoi rappel à ${volunteerId}`, error);
+        return {
+            success: false,
+            error: error.toString()
         };
     }
 }

@@ -1,6 +1,6 @@
 /**
  * @file formHandler.js
- * @description Traitement des soumissions du Google Form
+ * @description Traitement des soumissions du Google Form avec mapping configuré
  */
 
 /**
@@ -69,7 +69,7 @@ function onFormSubmitVolunteer(e) {
 }
 
 /**
- * Extrait les données du formulaire
+ * Extrait les données du formulaire en utilisant le mapping configuré
  * @param {Object} e - Événement de soumission
  * @returns {Object|null} Données extraites
  */
@@ -88,36 +88,22 @@ function extractFormData(e) {
             vehiculeType: '',
             vehiculeId: null,
             permis: false,
-            quartiers: []
+            quartiers: [],
+            preferences: ''
         };
 
+        // Utilisation du mapping configuré pour extraire les données
         itemResponses.forEach(itemResponse => {
-            const question = itemResponse.getItem().getTitle();
+            const question = itemResponse.getItem().getTitle().toLowerCase();
             const answer = itemResponse.getResponse();
 
-            // Mapping des questions vers les champs
-            if (question.includes('Nom')) {
-                data.nom = answer;
-            } else if (question.includes('Prénom')) {
-                data.prenom = answer;
-            } else if (question.includes('téléphone')) {
-                data.telephone = answer;
-            } else if (question.includes('Disponibilité')) {
-                // Si réponse multiple
-                if (Array.isArray(answer)) {
-                    data.disponibilites = answer;
-                } else {
-                    data.disponibilites = [answer];
-                }
-            } else if (question.includes('véhicule')) {
-                data.vehiculeType = answer;
-            } else if (question.includes('Permis')) {
-                data.permis = answer === 'Oui';
-            } else if (question.includes('Préférences') || question.includes('livraison')) {
-                // Extraction des quartiers depuis les préférences
-                data.quartiers = extractQuartiersFromPreferences(answer);
+            // Détection du champ via les mots-clés du mapping
+            const fieldName = detectFieldFromQuestion(question);
+
+            if (fieldName) {
+                processFormField(data, fieldName, answer, question);
             }
-        }
+        });
 
         // Résolution du véhicule
         if (data.vehiculeType && data.permis) {
@@ -139,60 +125,143 @@ function extractFormData(e) {
 }
 
 /**
+ * Détecte le nom du champ à partir de la question en utilisant le mapping
+ * @param {string} question - Question du formulaire
+ * @returns {string|null} Nom du champ ou null
+ */
+function detectFieldFromQuestion(question) {
+    const mapping = FORM_FIELD_MAPPING.keywords;
+
+    // Recherche du mot-clé correspondant dans la question
+    for (const [keyword, fieldName] of Object.entries(mapping)) {
+        if (question.includes(keyword)) {
+            return fieldName;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Traite un champ du formulaire selon son type
+ * @param {Object} data - Objet de données à remplir
+ * @param {string} fieldName - Nom du champ
+ * @param {*} answer - Réponse du formulaire
+ * @param {string} question - Question complète
+ */
+function processFormField(data, fieldName, answer, question) {
+    switch (fieldName) {
+        case 'nom':
+            data.nom = String(answer).trim();
+            break;
+
+        case 'prenom':
+            data.prenom = String(answer).trim();
+            break;
+
+        case 'telephone':
+            data.telephone = String(answer).trim();
+            break;
+
+        case 'disponibilites':
+            // Gestion des réponses multiples ou simples
+            if (Array.isArray(answer)) {
+                data.disponibilites = answer.map(d => normalizeAvailability(d));
+            } else {
+                data.disponibilites = [normalizeAvailability(answer)];
+            }
+            break;
+
+        case 'vehiculeType':
+            data.vehiculeType = String(answer).trim();
+            break;
+
+        case 'permis':
+            // Utilisation du mapping de valeurs
+            const normalizedAnswer = String(answer).toLowerCase().trim();
+            data.permis = FORM_FIELD_MAPPING.values[normalizedAnswer] || false;
+            break;
+
+        case 'preferences':
+            data.preferences = answer;
+            data.quartiers = extractQuartiersFromPreferences(answer);
+            break;
+    }
+}
+
+/**
+ * Normalise un créneau de disponibilité
+ * @param {string} availability - Disponibilité brute
+ * @returns {string} Disponibilité normalisée
+ */
+function normalizeAvailability(availability) {
+    if (!availability) return '';
+
+    const normalized = String(availability).trim();
+    const slots = FORM_FIELD_MAPPING.availabilitySlots;
+
+    // Recherche d'une correspondance exacte ou partielle
+    for (const slot of slots) {
+        if (normalized.toLowerCase().includes(slot.toLowerCase()) ||
+            slot.toLowerCase().includes(normalized.toLowerCase())) {
+            return slot;
+        }
+    }
+
+    // Si pas de correspondance, retourne la valeur normalisée
+    return normalized;
+}
+
+/**
  * Extrait les IDs de quartiers depuis les préférences
  * @param {string|Array} preferences - Préférences géographiques
  * @returns {Array} Liste des IDs de quartiers
  */
 function extractQuartiersFromPreferences(preferences) {
-    // Cette fonction doit être adaptée selon le format exact des réponses
-    // Pour l'instant, retourne un tableau vide
-    // À personnaliser selon vos besoins
-
     if (!preferences) {
         return [];
     }
 
     const quartiers = [];
-
-    // Exemple de mapping simple
-    // Vous devrez adapter selon votre API GEO
     const preferencesArray = Array.isArray(preferences) ? preferences : [preferences];
 
     preferencesArray.forEach(pref => {
-        // Logique de résolution des quartiers
-        // Par exemple, si "Nantes Centre" est mentionné
         if (typeof pref === 'string') {
-            if (pref.includes('Nantes Centre')) {
-                // Récupérer les quartiers de Nantes Centre via GEO API
+            const prefLower = pref.toLowerCase();
+
+            // Mapping géographique basique (à adapter selon votre API)
+            if (prefLower.includes('nantes centre') || prefLower.includes('centre')) {
+                // Récupérer les quartiers du secteur Nantes Centre
                 const quartiersCentre = getQuartiersBySecteur('NANTES_CENTRE_ID');
                 quartiersCentre.forEach(q => quartiers.push(q.id));
             }
-            // Ajouter d'autres mappings...
+
+            if (prefLower.includes('nantes nord')) {
+                const quartiersNord = getQuartiersBySecteur('NANTES_NORD_ID');
+                quartiersNord.forEach(q => quartiers.push(q.id));
+            }
+
+            if (prefLower.includes('nantes sud')) {
+                const quartiersSud = getQuartiersBySecteur('NANTES_SUD_ID');
+                quartiersSud.forEach(q => quartiers.push(q.id));
+            }
+
+            // Ajoutez d'autres mappings selon vos besoins
         }
     });
 
-    return quartiers;
+    return [...new Set(quartiers)]; // Supprime les doublons
 }
 
 /**
- * Résout l'ID du véhicule depuis le type
- * @param {string} vehiculeType - Type de véhicule (ex: "Citadine", "Berline")
+ * Résout l'ID du véhicule depuis le type en utilisant le mapping
+ * @param {string} vehiculeType - Type de véhicule
  * @returns {number|null} ID du véhicule
  */
 function resolveVehicleId(vehiculeType) {
     const vehicles = getAllVehicles();
-
-    // Normalisation du type
     const normalizedType = vehiculeType.toLowerCase().trim();
-
-    // Mapping des types
-    const typeMapping = {
-        'citadine': ['citadine', 'petite voiture'],
-        'berline': ['berline', 'voiture moyenne'],
-        'suv': ['suv', 'grand véhicule', '4x4'],
-        'utilitaire': ['utilitaire', 'camionnette', 'fourgon'],
-        'break': ['break', 'familiale']
-    };
+    const typeMapping = FORM_FIELD_MAPPING.vehicleTypes;
 
     for (const vehicle of vehicles) {
         const vehicleType = vehicle.type.toLowerCase();
@@ -204,7 +273,8 @@ function resolveVehicleId(vehiculeType) {
 
         // Recherche via mapping
         for (const [key, aliases] of Object.entries(typeMapping)) {
-            if (vehicleType.includes(key) && aliases.some(alias => normalizedType.includes(alias))) {
+            if (vehicleType.includes(key) &&
+                aliases.some(alias => normalizedType.includes(alias))) {
                 return vehicle.id;
             }
         }

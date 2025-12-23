@@ -93,6 +93,56 @@ const DISPONIBILITE_COLUMNS = {
 };
 
 /**
+ * 📝 Mapping des questions du Google Form vers les champs système
+ * Ce mapping facilite la maintenance et permet de modifier facilement les questions du formulaire
+ */
+const FORM_FIELD_MAPPING = {
+    // Mapping par mots-clés contenus dans les questions du formulaire
+    keywords: {
+        'nom': 'nom',
+        'prénom': 'prenom',
+        'prenom': 'prenom',
+        'téléphone': 'telephone',
+        'telephone': 'telephone',
+        'disponibilité': 'disponibilites',
+        'disponibilite': 'disponibilites',
+        'véhicule': 'vehiculeType',
+        'vehicule': 'vehiculeType',
+        'permis': 'permis',
+        'préférences': 'preferences',
+        'preferences': 'preferences',
+        'livraison': 'preferences'
+    },
+
+    // Mapping des valeurs de réponse
+    values: {
+        'oui': true,
+        'non': false,
+        'yes': true,
+        'no': false
+    },
+
+    // Types de véhicules reconnus
+    vehicleTypes: {
+        'citadine': ['citadine', 'petite voiture', 'petite'],
+        'berline': ['berline', 'voiture moyenne', 'moyenne'],
+        'suv': ['suv', 'grand véhicule', '4x4', 'grand'],
+        'utilitaire': ['utilitaire', 'camionnette', 'fourgon', 'van'],
+        'break': ['break', 'familiale']
+    },
+
+    // Créneaux de disponibilité standards
+    availabilitySlots: [
+        'Matin',
+        'Après-midi',
+        'Soirée',
+        'Week-end',
+        'Semaine',
+        'Journée complète'
+    ]
+};
+
+/**
  * Récupère les propriétés de script du système bénévoles
  */
 function getVolunteerScriptConfig() {

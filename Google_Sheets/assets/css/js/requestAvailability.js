@@ -1,0 +1,236 @@
+/**
+ * @file requestAvailability.js
+ * @description JavaScript pour le formulaire de demande de disponibilités
+ */
+
+let allVolunteers = [];
+let selectedVolunteers = new Set();
+
+// Initialisation au chargement de la page
+window.onload = function () {
+    loadVolunteers();
+
+    // Générer un ID d'événement unique
+    document.getElementById('eventId').value = 'EVT_' + new Date().getTime();
+};
+
+/**
+ * Charge la liste des bénévoles
+ */
+function loadVolunteers() {
+    google.script.run
+        .withSuccessHandler(function (volunteers) {
+            allVolunteers = volunteers.filter(v => v.actif && v.statut === 'Validé');
+            displayVolunteers(allVolunteers);
+        })
+        .withFailureHandler(onError)
+        .getAllVolunteers({});
+}
+
+/**
+ * Affiche la liste des bénévoles avec checkboxes
+ * @param {Array} volunteers - Liste des bénévoles à afficher
+ */
+function displayVolunteers(volunteers) {
+    const container = document.getElementById('volunteerSelection');
+    container.innerHTML = '';
+
+    if (volunteers.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666;">Aucun bénévole trouvé</p>';
+        return;
+    }
+
+    volunteers.forEach(volunteer => {
+        const item = document.createElement('div');
+        item.className = 'volunteer-item';
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+        item.style.gap = '10px';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'vol_' + volunteer.id;
+        checkbox.value = volunteer.id;
+        checkbox.checked = selectedVolunteers.has(volunteer.id);
+        checkbox.onchange = function () {
+            if (this.checked) {
+                selectedVolunteers.add(volunteer.id);
+            } else {
+                selectedVolunteers.delete(volunteer.id);
+            }
+            updateSelectedCount();
+        };
+
+        const label = document.createElement('label');
+        label.setAttribute('for', 'vol_' + volunteer.id);
+        label.style.flex = '1';
+        label.style.cursor = 'pointer';
+        label.style.margin = '0';
+
+        let badges = '';
+        if (volunteer.confiance) {
+            badges = '<span class="info-badge badge-trust">Confiance</span>';
+        }
+
+        label.innerHTML = `
+            <strong>${volunteer.prenom} ${volunteer.nom}</strong> ${badges}<br>
+            <small style="color: #666;">${volunteer.email}</small>
+        `;
+
+        item.appendChild(checkbox);
+        item.appendChild(label);
+        container.appendChild(item);
+    });
+}
+
+/**
+ * Met à jour la liste des bénévoles selon le filtre sélectionné
+ */
+function updateVolunteerList() {
+    const filterType = document.getElementById('filterType').value;
+    const filterOptions = document.getElementById('filterOptions');
+    const filterValue = document.getElementById('filterValue');
+
+    if (filterType === 'all') {
+        filterOptions.style.display = 'none';
+        displayVolunteers(allVolunteers);
+        return;
+    }
+
+    filterOptions.style.display = 'block';
+    filterValue.innerHTML = '<option value="">-- Sélectionner --</option>';
+
+    // Options selon le type de filtre
+    if (filterType === 'status') {
+        ['Reçu', 'En cours', 'Validé'].forEach(status => {
+            const option = document.createElement('option');
+            option.value = status;
+            option.textContent = status;
+            filterValue.appendChild(option);
+        });
+    } else if (filterType === 'disponibilite') {
+        ['Matin', 'Après-midi', 'Soirée', 'Week-end'].forEach(dispo => {
+            const option = document.createElement('option');
+            option.value = dispo;
+            option.textContent = dispo;
+            filterValue.appendChild(option);
+        });
+    } else if (filterType === 'trust') {
+        filterOptions.style.display = 'none';
+        const filtered = allVolunteers.filter(v => v.confiance);
+        displayVolunteers(filtered);
+    }
+}
+
+/**
+ * Gère le changement de valeur du filtre
+ */
+document.getElementById('filterValue').addEventListener('change', function () {
+    const filterType = document.getElementById('filterType').value;
+    const value = this.value;
+
+    if (!value) {
+        displayVolunteers(allVolunteers);
+        return;
+    }
+
+    let filtered = allVolunteers;
+
+    if (filterType === 'status') {
+        filtered = allVolunteers.filter(v => v.statut === value);
+    }
+
+    displayVolunteers(filtered);
+});
+
+/**
+ * Gère la recherche de bénévoles
+ */
+document.getElementById('searchVolunteer').addEventListener('input', function (e) {
+    const term = e.target.value.toLowerCase();
+    const filtered = allVolunteers.filter(v =>
+        v.nom.toLowerCase().includes(term) ||
+        v.prenom.toLowerCase().includes(term) ||
+        v.email.toLowerCase().includes(term)
+    );
+    displayVolunteers(filtered);
+});
+
+/**
+ * Met à jour le compteur de bénévoles sélectionnés
+ */
+function updateSelectedCount() {
+    document.getElementById('selectedCount').textContent = selectedVolunteers.size;
+}
+
+/**
+ * Gère la soumission du formulaire
+ */
+document.getElementById('availabilityForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    if (selectedVolunteers.size === 0) {
+        showAlert('error', '❌ Veuillez sélectionner au moins un bénévole');
+        return;
+    }
+
+    const eventDetails = {
+        eventId: document.getElementById('eventId').value,
+        titre: document.getElementById('titre').value.trim(),
+        date: document.getElementById('date').value,
+        horaire: document.getElementById('horaire').value.trim(),
+        lieu: document.getElementById('lieu').value.trim(),
+        type: document.getElementById('type').value,
+        description: document.getElementById('description').value.trim()
+    };
+
+    const volunteerIds = Array.from(selectedVolunteers);
+
+    document.getElementById('loadingBox').style.display = 'block';
+    document.getElementById('alertBox').style.display = 'none';
+
+    google.script.run
+        .withSuccessHandler(onSendSuccess)
+        .withFailureHandler(onError)
+        .sendBulkAvailabilityRequests(volunteerIds, eventDetails);
+});
+
+/**
+ * Gestion du succès de l'envoi
+ * @param {Object} result - Résultat de l'opération
+ */
+function onSendSuccess(result) {
+    document.getElementById('loadingBox').style.display = 'none';
+
+    let message = `✅ Envoyé: ${result.sent}<br>`;
+    if (result.failed > 0) {
+        message += `❌ Échecs: ${result.failed}`;
+    }
+
+    showAlert('success', message);
+
+    setTimeout(() => {
+        google.script.host.close();
+    }, 2000);
+}
+
+/**
+ * Gestion des erreurs
+ * @param {Error} error - Erreur rencontrée
+ */
+function onError(error) {
+    document.getElementById('loadingBox').style.display = 'none';
+    showAlert('error', '❌ Erreur: ' + error.message);
+}
+
+/**
+ * Affiche un message d'alerte
+ * @param {string} type - Type d'alerte (success, error, warning, info)
+ * @param {string} message - Message à afficher
+ */
+function showAlert(type, message) {
+    const alertBox = document.getElementById('alertBox');
+    alertBox.className = `alert alert-${type}`;
+    alertBox.innerHTML = message;
+    alertBox.style.display = 'block';
+}
