@@ -6,6 +6,10 @@
 /**
  * Crée le menu personnalisé à l'ouverture
  */
+function onOpen() {
+    onOpenVolunteer();
+}
+
 function onOpenVolunteer() {
     const ui = SpreadsheetApp.getUi();
     
@@ -15,12 +19,35 @@ function onOpenVolunteer() {
         .addSeparator()
         .addItem('📧 Demander Disponibilités', 'showRequestAvailabilityDialog')
         .addSeparator()
+        .addSubMenu(createSyncMenu(ui))
+        .addSubMenu(createImportMenu(ui))
         .addSubMenu(createValidationMenu(ui))
         .addSeparator()
+        .addItem('📊 Statistiques', 'showVolunteerStatistics')
         .addItem('🔄 Rafraîchir Cache', 'clearVolunteerCache')
         .addToUi();
 }
 
+/**
+ * Crée le sous-menu de synchronisation
+ */
+function createSyncMenu(ui) {
+    return ui.createMenu('🔄 Synchronisation')
+        .addItem('Contacts → Sheets', 'syncContactsToVolunteersMenu')
+        .addItem('Sheets → Contacts', 'syncVolunteersToContactsMenu')
+        .addItem('Changements récents (24h)', 'syncRecentContactChangesMenu');
+}
+
+/**
+ * Crée le sous-menu d'import
+ */
+function createImportMenu(ui) {
+    return ui.createMenu('📥 Import')
+        .addItem('Créer feuille import', 'createVolunteerBulkImportSheet')
+        .addItem('Traiter import (10 lignes)', 'processVolunteerBulkImportMenu')
+        .addItem('Statistiques import', 'showBulkImportStats')
+        .addItem('Effacer feuille import', 'clearVolunteerBulkImportSheet');
+}
 
 /**
  * Crée le sous-menu de validation
@@ -49,11 +76,152 @@ function showAddVolunteerDialog() {
  */
 function showEditVolunteerDialog() {
     const html = HtmlService.createHtmlOutputFromFile('views/volunteer/editVolunteer')
-        .setWidth(600)
-        .setHeight(700)
+        .setWidth(700)
+        .setHeight(750)
         .setTitle('Modifier Bénévole');
     
     SpreadsheetApp.getUi().showModalDialog(html, 'Modifier Bénévole');
+}
+
+/**
+ * Affiche le dialogue de demande de disponibilités
+ */
+function showRequestAvailabilityDialog() {
+    const html = HtmlService.createHtmlOutputFromFile('views/volunteer/requestAvailability')
+        .setWidth(700)
+        .setHeight(800)
+        .setTitle('Demander Disponibilités');
+    
+    SpreadsheetApp.getUi().showModalDialog(html, 'Demander Disponibilités');
+}
+
+/**
+ * Synchronisation Contacts → Sheets (menu)
+ */
+function syncContactsToVolunteersMenu() {
+    const ui = SpreadsheetApp.getUi();
+    const response = ui.alert(
+        'Synchronisation Contacts → Sheets',
+        'Cette action mettra à jour tous les bénévoles actifs depuis Google Contacts. Continuer ?',
+        ui.ButtonSet.YES_NO
+    );
+    
+    if (response === ui.Button.YES) {
+        const result = syncAllContactsToVolunteers();
+        
+        let message = `✅ Synchronisation terminée\n\n`;
+        message += `Total: ${result.total}\n`;
+        message += `Mis à jour: ${result.updated}\n`;
+        message += `Inchangés: ${result.unchanged}\n`;
+        message += `Échecs: ${result.failed}`;
+        
+        ui.alert('Résultat', message, ui.ButtonSet.OK);
+    }
+}
+
+/**
+ * Synchronisation Sheets → Contacts (menu)
+ */
+function syncVolunteersToContactsMenu() {
+    const ui = SpreadsheetApp.getUi();
+    const response = ui.alert(
+        'Synchronisation Sheets → Contacts',
+        'Cette action créera/mettra à jour les contacts Google pour tous les bénévoles actifs. Continuer ?',
+        ui.ButtonSet.YES_NO
+    );
+    
+    if (response === ui.Button.YES) {
+        const result = syncAllVolunteersToContacts();
+        
+        let message = `✅ Synchronisation terminée\n\n`;
+        message += `Total: ${result.total}\n`;
+        message += `Synchronisés: ${result.synced}\n`;
+        message += `Échecs: ${result.failed}`;
+        
+        ui.alert('Résultat', message, ui.ButtonSet.OK);
+    }
+}
+
+/**
+ * Synchronisation changements récents (menu)
+ */
+function syncRecentContactChangesMenu() {
+    const result = syncRecentContactChanges(24);
+    
+    const ui = SpreadsheetApp.getUi();
+    let message = `✅ Synchronisation des changements récents (24h)\n\n`;
+    message += `Contacts modifiés: ${result.total}\n`;
+    message += `Mis à jour: ${result.updated}\n`;
+    message += `Inchangés: ${result.unchanged}\n`;
+    message += `Échecs: ${result.failed}`;
+    
+    ui.alert('Résultat', message, ui.ButtonSet.OK);
+}
+
+/**
+ * Traitement import (menu)
+ */
+function processVolunteerBulkImportMenu() {
+    const ui = SpreadsheetApp.getUi();
+    const result = processVolunteerBulkImport(10);
+    
+    if (!result.success && result.message) {
+        ui.alert('Erreur', result.message, ui.ButtonSet.OK);
+        return;
+    }
+    
+    let message = `✅ Import traité\n\n`;
+    message += `Traités: ${result.processed}\n`;
+    message += `Réussis: ${result.succeeded}\n`;
+    message += `Échecs: ${result.failed}\n`;
+    message += `Ignorés: ${result.skipped}`;
+    
+    ui.alert('Résultat Import', message, ui.ButtonSet.OK);
+}
+
+/**
+ * Affiche les statistiques d'import
+ */
+function showBulkImportStats() {
+    const stats = getVolunteerBulkImportStats();
+    
+    const ui = SpreadsheetApp.getUi();
+    let message = `📊 Statistiques Import\n\n`;
+    message += `Total: ${stats.total}\n`;
+    message += `En attente: ${stats.pending}\n`;
+    message += `En cours: ${stats.processing}\n`;
+    message += `Réussis: ${stats.success}\n`;
+    message += `Erreurs: ${stats.error}`;
+    
+    ui.alert('Statistiques', message, ui.ButtonSet.OK);
+}
+
+/**
+ * Calcule et affiche les statistiques
+ */
+function showVolunteerStatistics() {
+    const stats = calculateVolunteerStatistics();
+    
+    let message = `═══════════════════════════════════════\n`;
+    message += `📊 STATISTIQUES BÉNÉVOLES\n`;
+    message += `═══════════════════════════════════════\n\n`;
+    
+    message += `👥 BÉNÉVOLES\n`;
+    message += `  Total: ${stats.total}\n`;
+    message += `  Actifs: ${stats.actifs}\n`;
+    message += `  Validés: ${stats.valides}\n`;
+    message += `  En attente: ${stats.enAttente}\n`;
+    message += `  Confiance: ${stats.confiance}\n`;
+    message += `  Avec véhicule: ${stats.avecVehicule}\n\n`;
+    
+    message += `📋 DONNÉES\n`;
+    message += `  Disponibilités: ${stats.totalDisponibilites}\n`;
+    message += `  Couvertures: ${stats.totalCouvertures}\n`;
+    message += `  Véhicules: ${stats.totalVehicules}\n\n`;
+    
+    message += `═══════════════════════════════════════\n`;
+    
+    SpreadsheetApp.getUi().alert('Statistiques', message, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 /**
@@ -78,14 +246,14 @@ function calculateVolunteerStatistics() {
     const dispSheet = SpreadsheetApp.getActiveSpreadsheet()
         .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
     if (dispSheet) {
-        stats.totalDisponibilites = dispSheet.getLastRow() - 1;
+        stats.totalDisponibilites = Math.max(0, dispSheet.getLastRow() - 1);
     }
     
     // Compte les couvertures
     const covSheet = SpreadsheetApp.getActiveSpreadsheet()
         .getSheetByName(VOLUNTEER_CONFIG.SHEETS.COUVERTURE);
     if (covSheet) {
-        stats.totalCouvertures = covSheet.getLastRow() - 1;
+        stats.totalCouvertures = Math.max(0, covSheet.getLastRow() - 1);
     }
     
     return stats;
@@ -116,7 +284,7 @@ function validateVolunteerSheets() {
     requiredSheets.forEach(sheetName => {
         const sheet = ss.getSheetByName(sheetName);
         if (sheet) {
-            existing.push(`✅ ${sheetName}`);
+            existing.push(`✅ ${sheetName} (${sheet.getLastRow() - 1} lignes)`);
         } else {
             missing.push(`❌ ${sheetName}`);
         }
