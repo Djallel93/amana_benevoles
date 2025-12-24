@@ -1,0 +1,78 @@
+<script>
+    /**
+     * @file common.html
+     * @description Fonctions JavaScript communes partagées entre les différentes vues
+     */
+
+    /**
+     * Remplit le sélecteur de véhicules
+     * @param {Array} vehicles - Liste des véhicules
+     */
+    function populateVehicles(vehicles) {
+        const select = document.getElementById('vehicule');
+        if (!select) return;
+
+        vehicles.forEach(vehicle => {
+            const option = document.createElement('option');
+            option.value = vehicle.id;
+            option.textContent = `${vehicle.type} (${vehicle.capaciteKg} kg)`;
+            select.appendChild(option);
+        });
+    }
+
+    /**
+     * Gestion des erreurs
+     * @param {Error} error - Erreur rencontrée
+     */
+    function onError(error) {
+        const loadingBox = document.getElementById('loadingBox');
+        if (loadingBox) {
+            loadingBox.style.display = 'none';
+        }
+        showAlert('error', `❌ Erreur système: ${error.message}`);
+    }
+
+    /**
+     * Affiche un message d'alerte
+     * @param {string} type - Type d'alerte (success, error, warning, info)
+     * @param {string} message - Message à afficher
+     */
+    function showAlert(type, message) {
+        const alertBox = document.getElementById('alertBox');
+        if (!alertBox) return;
+
+        alertBox.className = `alert alert-${type}`;
+        alertBox.innerHTML = message;
+        alertBox.style.display = 'block';
+    }
+
+    /**
+     * Masque l'alerte
+     */
+    function hideAlert() {
+        const alertBox = document.getElementById('alertBox');
+        if (alertBox) {
+            alertBox.style.display = 'none';
+        }
+    }
+
+    /**
+     * Affiche le loading
+     */
+    function showLoading() {
+        const loadingBox = document.getElementById('loadingBox');
+        if (loadingBox) {
+            loadingBox.style.display = 'block';
+        }
+    }
+
+    /**
+     * Masque le loading
+     */
+    function hideLoading() {
+        const loadingBox = document.getElementById('loadingBox');
+        if (loadingBox) {
+            loadingBox.style.display = 'none';
+        }
+    }
+</script>

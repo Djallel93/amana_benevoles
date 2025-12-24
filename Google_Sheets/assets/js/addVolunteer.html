@@ -1,0 +1,76 @@
+<script>
+    /**
+     * @file addVolunteer.html
+     * @description JavaScript pour le formulaire d'ajout de bénévole
+     */
+
+    // Initialisation au chargement du DOM
+    document.addEventListener('DOMContentLoaded', function () {
+        loadVehicles();
+        setupFormHandlers();
+    });
+
+    /**
+     * Charge la liste des véhicules
+     */
+    function loadVehicles() {
+        google.script.run
+            .withSuccessHandler(populateVehicles)
+            .withFailureHandler(onError)
+            .getAllVehicles();
+    }
+
+    /**
+     * Configure les gestionnaires d'événements du formulaire
+     */
+    function setupFormHandlers() {
+        const form = document.getElementById('volunteerForm');
+        if (form) {
+            form.addEventListener('submit', handleFormSubmit);
+        }
+    }
+
+    /**
+     * Gestion de la soumission du formulaire
+     * @param {Event} e - Événement de soumission
+     */
+    function handleFormSubmit(e) {
+        e.preventDefault();
+
+        const formData = {
+            nom: document.getElementById('nom').value.trim(),
+            prenom: document.getElementById('prenom').value.trim(),
+            email: document.getElementById('email').value.trim(),
+            telephone: document.getElementById('telephone').value.trim(),
+            id_vehicule: document.getElementById('vehicule').value || null,
+            confiance: document.getElementById('confiance').checked
+        };
+
+        showLoading();
+        hideAlert();
+
+        google.script.run
+            .withSuccessHandler(onSuccess)
+            .withFailureHandler(onError)
+            .createVolunteer(formData);
+    }
+
+    /**
+     * Gestion du succès de la création
+     * @param {Object} result - Résultat de l'opération
+     */
+    function onSuccess(result) {
+        hideLoading();
+
+        if (result.success) {
+            showAlert('success', `✅ Bénévole créé avec succès ! ID: ${result.volunteerId}`);
+            document.getElementById('volunteerForm').reset();
+
+            setTimeout(() => {
+                google.script.host.close();
+            }, 2000);
+        } else {
+            showAlert('error', `❌ Erreur: ${result.error}`);
+        }
+    }
+</script>

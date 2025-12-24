@@ -3,6 +3,7 @@
 
 <head>
     <base target="_top">
+    <meta charset="UTF-8">
     <?!= HtmlService.createHtmlOutputFromFile('assets/css/volunteer_styles').getContent(); ?>
 </head>
 
@@ -62,7 +63,7 @@
 
                 <div class="form-group">
                     <label>Filtrer par</label>
-                    <select id="filterType" onchange="updateVolunteerList()">
+                    <select id="filterType">
                         <option value="all">Tous les bénévoles actifs</option>
                         <option value="status">Par statut</option>
                         <option value="trust">Bénévoles de confiance</option>
@@ -99,6 +100,7 @@
         </form>
     </div>
 
+    <?!= HtmlService.createHtmlOutputFromFile('assets/js/common').getContent(); ?>
     <?!= HtmlService.createHtmlOutputFromFile('assets/js/requestAvailability').getContent(); ?>
 </body>
 
