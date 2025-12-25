@@ -12,7 +12,7 @@ function onOpen() {
 
 function onOpenVolunteer() {
     const ui = SpreadsheetApp.getUi();
-    
+
     ui.createMenu('👥 Gestion Bénévoles')
         .addItem('➕ Nouveau Bénévole', 'showAddVolunteerDialog')
         .addItem('✏️ Modifier Bénévole', 'showEditVolunteerDialog')
@@ -60,38 +60,50 @@ function createValidationMenu(ui) {
 }
 
 /**
+ * Helper pour inclure des fichiers HTML avec évaluation des templates
+ * @param {string} filename - Nom du fichier à inclure
+ * @returns {string} Contenu évalué du fichier
+ */
+function include(filename) {
+    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/**
  * Affiche le dialogue d'ajout de bénévole
+ * CORRECTION : Utilisation de createTemplateFromFile au lieu de createHtmlOutputFromFile
  */
 function showAddVolunteerDialog() {
-    const html = HtmlService.createHtmlOutputFromFile('views/volunteer/addVolunteer')
+    const template = HtmlService.createTemplateFromFile('views/volunteer/addVolunteer');
+    const html = template.evaluate()
         .setWidth(600)
-        .setHeight(700)
-        .setTitle('Nouveau Bénévole');
-    
+        .setHeight(700);
+
     SpreadsheetApp.getUi().showModalDialog(html, 'Nouveau Bénévole');
 }
 
 /**
  * Affiche le dialogue de modification de bénévole
+ * CORRECTION : Utilisation de createTemplateFromFile
  */
 function showEditVolunteerDialog() {
-    const html = HtmlService.createHtmlOutputFromFile('views/volunteer/editVolunteer')
+    const template = HtmlService.createTemplateFromFile('views/volunteer/editVolunteer');
+    const html = template.evaluate()
         .setWidth(700)
-        .setHeight(750)
-        .setTitle('Modifier Bénévole');
-    
+        .setHeight(750);
+
     SpreadsheetApp.getUi().showModalDialog(html, 'Modifier Bénévole');
 }
 
 /**
  * Affiche le dialogue de demande de disponibilités
+ * CORRECTION : Utilisation de createTemplateFromFile
  */
 function showRequestAvailabilityDialog() {
-    const html = HtmlService.createHtmlOutputFromFile('views/volunteer/requestAvailability')
+    const template = HtmlService.createTemplateFromFile('views/volunteer/requestAvailability');
+    const html = template.evaluate()
         .setWidth(700)
-        .setHeight(800)
-        .setTitle('Demander Disponibilités');
-    
+        .setHeight(800);
+
     SpreadsheetApp.getUi().showModalDialog(html, 'Demander Disponibilités');
 }
 
@@ -105,16 +117,16 @@ function syncContactsToVolunteersMenu() {
         'Cette action mettra à jour tous les bénévoles actifs depuis Google Contacts. Continuer ?',
         ui.ButtonSet.YES_NO
     );
-    
+
     if (response === ui.Button.YES) {
         const result = syncAllContactsToVolunteers();
-        
+
         let message = `✅ Synchronisation terminée\n\n`;
         message += `Total: ${result.total}\n`;
         message += `Mis à jour: ${result.updated}\n`;
         message += `Inchangés: ${result.unchanged}\n`;
         message += `Échecs: ${result.failed}`;
-        
+
         ui.alert('Résultat', message, ui.ButtonSet.OK);
     }
 }
@@ -129,15 +141,15 @@ function syncVolunteersToContactsMenu() {
         'Cette action créera/mettra à jour les contacts Google pour tous les bénévoles actifs. Continuer ?',
         ui.ButtonSet.YES_NO
     );
-    
+
     if (response === ui.Button.YES) {
         const result = syncAllVolunteersToContacts();
-        
+
         let message = `✅ Synchronisation terminée\n\n`;
         message += `Total: ${result.total}\n`;
         message += `Synchronisés: ${result.synced}\n`;
         message += `Échecs: ${result.failed}`;
-        
+
         ui.alert('Résultat', message, ui.ButtonSet.OK);
     }
 }
@@ -147,14 +159,14 @@ function syncVolunteersToContactsMenu() {
  */
 function syncRecentContactChangesMenu() {
     const result = syncRecentContactChanges(24);
-    
+
     const ui = SpreadsheetApp.getUi();
     let message = `✅ Synchronisation des changements récents (24h)\n\n`;
     message += `Contacts modifiés: ${result.total}\n`;
     message += `Mis à jour: ${result.updated}\n`;
     message += `Inchangés: ${result.unchanged}\n`;
     message += `Échecs: ${result.failed}`;
-    
+
     ui.alert('Résultat', message, ui.ButtonSet.OK);
 }
 
@@ -164,18 +176,18 @@ function syncRecentContactChangesMenu() {
 function processVolunteerBulkImportMenu() {
     const ui = SpreadsheetApp.getUi();
     const result = processVolunteerBulkImport(10);
-    
+
     if (!result.success && result.message) {
         ui.alert('Erreur', result.message, ui.ButtonSet.OK);
         return;
     }
-    
+
     let message = `✅ Import traité\n\n`;
     message += `Traités: ${result.processed}\n`;
     message += `Réussis: ${result.succeeded}\n`;
     message += `Échecs: ${result.failed}\n`;
     message += `Ignorés: ${result.skipped}`;
-    
+
     ui.alert('Résultat Import', message, ui.ButtonSet.OK);
 }
 
@@ -184,7 +196,7 @@ function processVolunteerBulkImportMenu() {
  */
 function showBulkImportStats() {
     const stats = getVolunteerBulkImportStats();
-    
+
     const ui = SpreadsheetApp.getUi();
     let message = `📊 Statistiques Import\n\n`;
     message += `Total: ${stats.total}\n`;
@@ -192,7 +204,7 @@ function showBulkImportStats() {
     message += `En cours: ${stats.processing}\n`;
     message += `Réussis: ${stats.success}\n`;
     message += `Erreurs: ${stats.error}`;
-    
+
     ui.alert('Statistiques', message, ui.ButtonSet.OK);
 }
 
@@ -201,11 +213,11 @@ function showBulkImportStats() {
  */
 function showVolunteerStatistics() {
     const stats = calculateVolunteerStatistics();
-    
+
     let message = `═══════════════════════════════════════\n`;
     message += `📊 STATISTIQUES BÉNÉVOLES\n`;
     message += `═══════════════════════════════════════\n\n`;
-    
+
     message += `👥 BÉNÉVOLES\n`;
     message += `  Total: ${stats.total}\n`;
     message += `  Actifs: ${stats.actifs}\n`;
@@ -213,14 +225,14 @@ function showVolunteerStatistics() {
     message += `  En attente: ${stats.enAttente}\n`;
     message += `  Confiance: ${stats.confiance}\n`;
     message += `  Avec véhicule: ${stats.avecVehicule}\n\n`;
-    
+
     message += `📋 DONNÉES\n`;
     message += `  Disponibilités: ${stats.totalDisponibilites}\n`;
     message += `  Couvertures: ${stats.totalCouvertures}\n`;
     message += `  Véhicules: ${stats.totalVehicules}\n\n`;
-    
+
     message += `═══════════════════════════════════════\n`;
-    
+
     SpreadsheetApp.getUi().alert('Statistiques', message, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
@@ -229,7 +241,7 @@ function showVolunteerStatistics() {
  */
 function calculateVolunteerStatistics() {
     const volunteers = getAllVolunteers();
-    
+
     const stats = {
         total: volunteers.length,
         actifs: volunteers.filter(v => v.actif).length,
@@ -241,21 +253,21 @@ function calculateVolunteerStatistics() {
         totalCouvertures: 0,
         totalVehicules: getAllVehicles().length
     };
-    
+
     // Compte les disponibilités
     const dispSheet = SpreadsheetApp.getActiveSpreadsheet()
         .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
     if (dispSheet) {
         stats.totalDisponibilites = Math.max(0, dispSheet.getLastRow() - 1);
     }
-    
+
     // Compte les couvertures
     const covSheet = SpreadsheetApp.getActiveSpreadsheet()
         .getSheetByName(VOLUNTEER_CONFIG.SHEETS.COUVERTURE);
     if (covSheet) {
         stats.totalCouvertures = Math.max(0, covSheet.getLastRow() - 1);
     }
-    
+
     return stats;
 }
 
@@ -277,10 +289,10 @@ function clearVolunteerCache() {
 function validateVolunteerSheets() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const requiredSheets = Object.values(VOLUNTEER_CONFIG.SHEETS);
-    
+
     const missing = [];
     const existing = [];
-    
+
     requiredSheets.forEach(sheetName => {
         const sheet = ss.getSheetByName(sheetName);
         if (sheet) {
@@ -289,14 +301,14 @@ function validateVolunteerSheets() {
             missing.push(`❌ ${sheetName}`);
         }
     });
-    
+
     let message = '📋 Validation Structure\n\n';
     message += existing.join('\n');
-    
+
     if (missing.length > 0) {
         message += '\n\nFeuilles manquantes:\n' + missing.join('\n');
     }
-    
+
     SpreadsheetApp.getUi().alert('Validation', message, SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
@@ -305,10 +317,10 @@ function validateVolunteerSheets() {
  */
 function testVolunteerGeoApi() {
     const result = testGeoApiConnection();
-    
-    const message = result.success 
+
+    const message = result.success
         ? `✅ ${result.message}`
         : `❌ ${result.message}`;
-    
+
     SpreadsheetApp.getUi().alert('Test API GEO', message, SpreadsheetApp.getUi().ButtonSet.OK);
 }

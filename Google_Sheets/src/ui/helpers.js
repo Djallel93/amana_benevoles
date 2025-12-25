@@ -301,3 +301,13 @@ function copyFormat(sheetName, sourceRange, targetRange) {
         logVolunteerError('Échec copie format', error);
     }
 }
+
+/**
+ * Fonction globale pour inclure des fichiers HTML dans les templates
+ * Utilisée par les balises <?!= include('filename') ?> dans les fichiers HTML
+ * @param {string} filename - Nom du fichier à inclure
+ * @returns {string} Contenu du fichier
+ */
+function include(filename) {
+    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}

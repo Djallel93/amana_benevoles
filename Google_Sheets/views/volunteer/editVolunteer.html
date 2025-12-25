@@ -3,7 +3,8 @@
 
 <head>
     <base target="_top">
-    <?!= HtmlService.createHtmlOutputFromFile('assets/css/volunteer_styles').getContent(); ?>
+    <meta charset="UTF-8">
+    <?!= include('assets/css/volunteer_styles'); ?>
 </head>
 
 <body>
@@ -91,8 +92,8 @@
         </form>
     </div>
 
-    <?!= HtmlService.createHtmlOutputFromFile('assets/js/common').getContent(); ?>
-    <?!= HtmlService.createHtmlOutputFromFile('assets/js/editVolunteer').getContent(); ?>
+    <?!= include('assets/js/common'); ?>
+    <?!= include('assets/js/editVolunteer'); ?>
 </body>
 
 </html>
