@@ -172,15 +172,14 @@ function generateVolunteerId() {
     for (let i = 1; i < data.length; i++) {
         const id = data[i][BENEVOLE_COLUMNS.ID];
         if (id) {
-            const cleanId = String(id).replace(/^BEN_/, '');
-            const num = parseInt(cleanId);
+            const num = parseInt(id);
             if (!isNaN(num) && num > maxId) {
                 maxId = num;
             }
         }
     }
 
-    const newId = `BEN_${String(maxId + 1).padStart(4, '0')}`;
+    const newId = `${String(maxId + 1).padStart(4, '0')}`;
     console.log(`Nouvel ID bénévole généré: ${newId}`);
     return newId;
 }
@@ -245,14 +244,34 @@ function normalizeVolunteerPhone(phone) {
         localNumber = cleaned.substring(2);
     } else if (cleaned.startsWith('0') && cleaned.length === 10) {
         localNumber = cleaned.substring(1);
-    } else if (cleaned.length === 9) {
+    } else if (cleaned.length === 9 && !cleaned.startsWith('0')) {
         localNumber = cleaned;
+    } else if (cleaned.length === 10 && cleaned.startsWith('0')) {
+        localNumber = cleaned.substring(1);
     } else {
-        return phone; // Retourne tel quel si format non reconnu
+        logWarning(`Format téléphone non standard: ${phone} -> ${cleaned}`);
+
+        if (cleaned.length >= 9) {
+            localNumber = cleaned.slice(-9);
+        } else {
+            return cleaned;
+        }
     }
 
     if (localNumber.length !== 9) {
-        return phone;
+        logWarning(`Téléphone invalide (doit faire 9 chiffres): ${phone}`);
+
+        if (localNumber.length > 9) {
+            localNumber = localNumber.slice(-9);
+        } else {
+            return cleaned;
+        }
+    }
+
+    const firstDigit = localNumber[0];
+    if (!/[1-9]/.test(firstDigit)) {
+        logWarning(`Téléphone invalide - premier chiffre doit être 1-9: ${phone}`);
+        return cleaned;
     }
 
     return `+33 ${localNumber[0]} ${localNumber.substring(1, 3)} ${localNumber.substring(3, 5)} ${localNumber.substring(5, 7)} ${localNumber.substring(7, 9)}`;

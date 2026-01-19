@@ -6,7 +6,7 @@
 /**
  * Crée le menu personnalisé à l'ouverture
  */
-function onOpen() {
+function handleOnOpen() {
     onOpenVolunteer();
 }
 
@@ -57,15 +57,6 @@ function createValidationMenu(ui) {
         .addItem('🔍 Valider Structure Feuilles', 'validateVolunteerSheets')
         .addItem('🌐 Tester API GEO', 'testVolunteerGeoApi')
         .addItem('📋 Rapport Complet', 'showValidationReport');
-}
-
-/**
- * Helper pour inclure des fichiers HTML avec évaluation des templates
- * @param {string} filename - Nom du fichier à inclure
- * @returns {string} Contenu évalué du fichier
- */
-function include(filename) {
-    return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /**

@@ -45,19 +45,18 @@ function createVolunteer(volunteerData) {
         const normalizedPhone = normalizeVolunteerPhone(volunteerData.telephone);
 
         // Construction de la ligne
-        const row = [
-            volunteerId,
-            volunteerData.nom || '',
-            volunteerData.prenom || '',
-            volunteerData.email || '',
-            normalizedPhone,
-            now, // date_inscription
-            true, // actif par défaut
-            volunteerData.confiance || false,
-            volunteerData.id_vehicule || '',
-            now, // derniere_maj
-            VOLUNTEER_CONFIG.STATUS.RECU // statut initial
-        ];
+        const row = Array(11).fill('');
+        row[BENEVOLE_COLUMNS.ID] = volunteerId;
+        row[BENEVOLE_COLUMNS.NOM] = volunteerData.nom || '';
+        row[BENEVOLE_COLUMNS.PRENOM] = volunteerData.prenom || '';
+        row[BENEVOLE_COLUMNS.EMAIL] = volunteerData.email || '';
+        row[BENEVOLE_COLUMNS.TELEPHONE] = normalizedPhone;
+        row[BENEVOLE_COLUMNS.DATE_INSCRIPTION] = now;
+        row[BENEVOLE_COLUMNS.ACTIF] = true;
+        row[BENEVOLE_COLUMNS.CONFIANCE] = volunteerData.confiance || false;
+        row[BENEVOLE_COLUMNS.ID_VEHICULE] = volunteerData.id_vehicule || '';
+        row[BENEVOLE_COLUMNS.DERNIERE_MAJ] = now;
+        row[BENEVOLE_COLUMNS.STATUT] = VOLUNTEER_CONFIG.STATUS.RECU;
 
         // Ajout de la ligne
         sheet.appendRow(row);
