@@ -1,16 +1,10 @@
 /**
  * @file reverseContactService.js
- * @description Synchronisation inverse: Google Contacts → Google Sheets
+ * @description Synchronisation inverse: Google Contacts → Google Sheets (People API)
  */
 
-/**
- * Met à jour un bénévole depuis Google Contacts
- * @param {string} email - Email du contact
- * @returns {Object} {success: boolean, updated?: Array, error?: string}
- */
 function updateVolunteerFromContact(email) {
     try {
-        // Recherche du bénévole par email
         const volunteer = findVolunteerByEmail(email);
 
         if (!volunteer) {
@@ -20,7 +14,6 @@ function updateVolunteerFromContact(email) {
             };
         }
 
-        // Recherche du contact Google
         const contact = findContactByEmail(email);
 
         if (!contact) {
@@ -30,10 +23,8 @@ function updateVolunteerFromContact(email) {
             };
         }
 
-        // Extraction des données du contact
         const contactData = extractContactData(contact);
 
-        // Vérification des changements
         const changes = detectContactChanges(volunteer, contactData);
 
         if (changes.length === 0) {
@@ -44,7 +35,6 @@ function updateVolunteerFromContact(email) {
             };
         }
 
-        // Mise à jour du bénévole
         const updateData = {};
 
         if (changes.includes('nom')) {
@@ -83,40 +73,30 @@ function updateVolunteerFromContact(email) {
     }
 }
 
-/**
- * Extrait les données d'un contact Google
- * @param {Contact} contact - Contact Google
- * @returns {Object} Données extraites
- */
 function extractContactData(contact) {
     const data = {
-        prenom: contact.getGivenName() || '',
-        nom: contact.getFamilyName() || '',
+        prenom: '',
+        nom: '',
         email: '',
         telephone: ''
     };
 
-    // Récupération de l'email
-    const emails = contact.getEmails();
-    if (emails.length > 0) {
-        data.email = emails[0].getAddress();
+    if (contact.names && contact.names.length > 0) {
+        data.prenom = contact.names[0].givenName || '';
+        data.nom = contact.names[0].familyName || '';
     }
 
-    // Récupération du téléphone
-    const phones = contact.getPhones();
-    if (phones.length > 0) {
-        data.telephone = phones[0].getPhoneNumber();
+    if (contact.emailAddresses && contact.emailAddresses.length > 0) {
+        data.email = contact.emailAddresses[0].value;
+    }
+
+    if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+        data.telephone = contact.phoneNumbers[0].value;
     }
 
     return data;
 }
 
-/**
- * Détecte les changements entre un bénévole et un contact
- * @param {Object} volunteer - Données du bénévole
- * @param {Object} contactData - Données du contact
- * @returns {Array} Liste des champs modifiés
- */
 function detectContactChanges(volunteer, contactData) {
     const changes = [];
 
@@ -132,7 +112,6 @@ function detectContactChanges(volunteer, contactData) {
         changes.push('email');
     }
 
-    // Normalisation des téléphones pour comparaison
     const normalizedVolunteerPhone = normalizePhoneForComparison(volunteer.telephone);
     const normalizedContactPhone = normalizePhoneForComparison(contactData.telephone);
 
@@ -143,20 +122,11 @@ function detectContactChanges(volunteer, contactData) {
     return changes;
 }
 
-/**
- * Normalise un téléphone pour comparaison
- * @param {string} phone - Numéro de téléphone
- * @returns {string} Téléphone normalisé (chiffres seulement)
- */
 function normalizePhoneForComparison(phone) {
     if (!phone) return '';
     return phone.replace(/\D/g, '');
 }
 
-/**
- * Synchronise tous les bénévoles depuis Google Contacts
- * @returns {Object} Résultats de la synchronisation
- */
 function syncAllContactsToVolunteers() {
     try {
         const volunteers = getAllVolunteers({ actif: true });
@@ -197,7 +167,6 @@ function syncAllContactsToVolunteers() {
                 });
             }
 
-            // Délai pour éviter les quotas
             Utilities.sleep(100);
         });
 
@@ -225,34 +194,32 @@ function syncAllContactsToVolunteers() {
     }
 }
 
-/**
- * Détecte les contacts modifiés récemment
- * @param {number} hoursAgo - Nombre d'heures en arrière
- * @returns {Array} Liste des contacts modifiés
- */
 function detectRecentContactChanges(hoursAgo = 24) {
     try {
         const cutoffDate = new Date();
         cutoffDate.setHours(cutoffDate.getHours() - hoursAgo);
 
-        const allContacts = ContactsApp.getContacts();
+        const volunteers = getAllVolunteers({ actif: true });
         const recentChanges = [];
 
-        allContacts.forEach(contact => {
-            const lastUpdated = contact.getLastUpdated();
+        volunteers.forEach(volunteer => {
+            if (!volunteer.email) return;
 
-            if (lastUpdated && lastUpdated > cutoffDate) {
-                const emails = contact.getEmails();
-                if (emails.length > 0) {
-                    const email = emails[0].getAddress();
-                    const volunteer = findVolunteerByEmail(email);
+            const contact = findContactByEmail(volunteer.email);
+            if (!contact) return;
 
-                    if (volunteer) {
-                        recentChanges.push({
-                            email: email,
-                            volunteerId: volunteer.id,
-                            lastUpdated: lastUpdated
-                        });
+            if (contact.metadata && contact.metadata.sources) {
+                for (const source of contact.metadata.sources) {
+                    if (source.updateTime) {
+                        const updateDate = new Date(source.updateTime);
+                        if (updateDate > cutoffDate) {
+                            recentChanges.push({
+                                email: volunteer.email,
+                                volunteerId: volunteer.id,
+                                lastUpdated: updateDate
+                            });
+                            break;
+                        }
                     }
                 }
             }
@@ -266,11 +233,6 @@ function detectRecentContactChanges(hoursAgo = 24) {
     }
 }
 
-/**
- * Synchronise uniquement les contacts modifiés récemment
- * @param {number} hoursAgo - Nombre d'heures en arrière
- * @returns {Object} Résultats de la synchronisation
- */
 function syncRecentContactChanges(hoursAgo = 24) {
     try {
         const recentChanges = detectRecentContactChanges(hoursAgo);

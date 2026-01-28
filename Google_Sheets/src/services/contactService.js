@@ -1,13 +1,8 @@
 /**
  * @file contactService.js
- * @description Synchronisation avec Google Contacts
+ * @description Synchronisation principale avec Google Contacts via People API
  */
 
-/**
- * Crée ou met à jour un contact Google depuis un bénévole
- * @param {string} volunteerId - ID du bénévole
- * @returns {Object} {success: boolean, contactId?: string, error?: string}
- */
 function syncVolunteerToContact(volunteerId) {
     try {
         const volunteer = getVolunteerById(volunteerId);
@@ -19,14 +14,11 @@ function syncVolunteerToContact(volunteerId) {
             };
         }
 
-        // Recherche d'un contact existant par email
         const existingContact = findContactByEmail(volunteer.email);
 
         if (existingContact) {
-            // Mise à jour du contact existant
             return updateGoogleContact(existingContact, volunteer);
         } else {
-            // Création d'un nouveau contact
             return createGoogleContact(volunteer);
         }
 
@@ -39,36 +31,43 @@ function syncVolunteerToContact(volunteerId) {
     }
 }
 
-/**
- * Crée un nouveau contact Google
- * @param {Object} volunteer - Données du bénévole
- * @returns {Object} Résultat de la création
- */
 function createGoogleContact(volunteer) {
     try {
-        const contact = ContactsApp.createContact(
-            volunteer.prenom,
-            volunteer.nom,
-            volunteer.email
-        );
+        const paddedId = String(volunteer.id).padStart(3, '0');
 
-        // Ajout du numéro de téléphone
+        const person = {
+            names: [{
+                givenName: `${paddedId} -`,
+                middleName: volunteer.prenom,
+                familyName: volunteer.nom
+            }],
+            emailAddresses: [{
+                value: volunteer.email,
+                type: 'home'
+            }],
+            userDefined: buildCustomFields(volunteer)
+        };
+
         if (volunteer.telephone) {
-            contact.addPhone(ContactsApp.Field.MOBILE_PHONE, volunteer.telephone);
+            const cleanPhone = volunteer.telephone.replace(/'/g, '');
+            person.phoneNumbers = [{
+                value: cleanPhone,
+                type: 'mobile'
+            }];
         }
 
-        // Ajout de notes
-        const notes = buildContactNotes(volunteer);
-        contact.setNotes(notes);
+        const createdPerson = People.People.createContact(person);
 
-        // Ajout dans un groupe "Bénévoles"
-        addToVolunteerGroup(contact);
+        addToVolunteerGroup(createdPerson.resourceName);
+
+        applyStatusLabel(createdPerson.resourceName, volunteer.statut);
+        applyTirelireLabel(createdPerson.resourceName, volunteer.confiance);
 
         logVolunteerInfo(`Contact Google créé pour ${volunteer.id}`);
 
         return {
             success: true,
-            contactId: contact.getId()
+            contactId: createdPerson.resourceName
         };
 
     } catch (error) {
@@ -80,43 +79,49 @@ function createGoogleContact(volunteer) {
     }
 }
 
-/**
- * Met à jour un contact Google existant
- * @param {Contact} contact - Contact Google
- * @param {Object} volunteer - Données du bénévole
- * @returns {Object} Résultat de la mise à jour
- */
-function updateGoogleContact(contact, volunteer) {
+function updateGoogleContact(existingContact, volunteer) {
     try {
-        // Mise à jour du nom
-        contact.setGivenName(volunteer.prenom);
-        contact.setFamilyName(volunteer.nom);
+        const paddedId = String(volunteer.id).padStart(3, '0');
 
-        // Mise à jour de l'email
-        const emails = contact.getEmails();
-        if (emails.length > 0) {
-            contact.removeEmail(emails[0]);
-        }
-        contact.addEmail(ContactsApp.Field.HOME_EMAIL, volunteer.email);
+        const person = {
+            resourceName: existingContact.resourceName,
+            etag: existingContact.etag,
+            names: [{
+                givenName: `${paddedId} -`,
+                middleName: volunteer.prenom,
+                familyName: volunteer.nom
+            }],
+            emailAddresses: [{
+                value: volunteer.email,
+                type: 'home'
+            }],
+            userDefined: buildCustomFields(volunteer)
+        };
 
-        // Mise à jour du téléphone
-        const phones = contact.getPhones();
-        if (phones.length > 0) {
-            contact.removePhone(phones[0]);
-        }
         if (volunteer.telephone) {
-            contact.addPhone(ContactsApp.Field.MOBILE_PHONE, volunteer.telephone);
+            const cleanPhone = volunteer.telephone.replace(/'/g, '');
+            person.phoneNumbers = [{
+                value: cleanPhone,
+                type: 'mobile'
+            }];
         }
 
-        // Mise à jour des notes
-        const notes = buildContactNotes(volunteer);
-        contact.setNotes(notes);
+        const fieldMask = 'names,emailAddresses,phoneNumbers,userDefined';
+
+        const updatedPerson = People.People.updateContact(
+            person,
+            existingContact.resourceName,
+            { updatePersonFields: fieldMask }
+        );
+
+        applyStatusLabel(updatedPerson.resourceName, volunteer.statut);
+        applyTirelireLabel(updatedPerson.resourceName, volunteer.confiance);
 
         logVolunteerInfo(`Contact Google mis à jour pour ${volunteer.id}`);
 
         return {
             success: true,
-            contactId: contact.getId()
+            contactId: updatedPerson.resourceName
         };
 
     } catch (error) {
@@ -128,97 +133,118 @@ function updateGoogleContact(contact, volunteer) {
     }
 }
 
-/**
- * Construit les notes du contact
- * @param {Object} volunteer - Données du bénévole
- * @returns {string} Notes formatées
- */
-function buildContactNotes(volunteer) {
-    let notes = `🆔 ID: ${volunteer.id}\n`;
-    notes += `📅 Inscrit le: ${volunteer.dateInscription}\n`;
-    notes += `✅ Statut: ${volunteer.statut}\n`;
-    notes += `🔄 Actif: ${volunteer.actif ? 'Oui' : 'Non'}\n`;
+function buildCustomFields(volunteer) {
+    const customFields = [];
 
-    if (volunteer.confiance) {
-        notes += `🔒 Bénévole de confiance\n`;
-    }
+    const formattedDateInscription = formatSheetDateTime(volunteer.dateInscription);
+    const formattedDerniereMaj = formatSheetDateTime(volunteer.derniereMaj);
+
+    customFields.push({
+        key: 'Inscrit le',
+        value: formattedDateInscription
+    });
+
+    customFields.push({
+        key: 'Dernière MAJ',
+        value: formattedDerniereMaj
+    });
 
     if (volunteer.idVehicule) {
         const vehicle = getVehicleById(volunteer.idVehicule);
         if (vehicle) {
-            notes += `🚗 Véhicule: ${vehicle.type} (${vehicle.capaciteKg} kg)\n`;
+            customFields.push({
+                key: 'Véhicule',
+                value: `${vehicle.type} (${vehicle.capaciteKg} kg)`
+            });
         }
     }
 
-    // Disponibilités
     const availabilities = getVolunteerAvailabilities(volunteer.id);
     if (availabilities.length > 0) {
-        notes += `\n⏰ Disponibilités:\n`;
-        availabilities.forEach(avail => {
-            notes += `  • ${avail.disponibilite}`;
+        const dispoList = availabilities.map(avail => {
+            let text = avail.disponibilite;
             if (avail.courtDelaiOk) {
-                notes += ' (Court délai OK)';
+                text += ' (Court délai)';
             }
-            notes += '\n';
+            return text;
+        }).join(', ');
+
+        customFields.push({
+            key: 'Disponibilités',
+            value: dispoList
         });
     }
 
-    notes += `\n📝 Dernière mise à jour: ${volunteer.derniereMaj}`;
-
-    return notes;
+    return customFields;
 }
 
-/**
- * Recherche un contact par email
- * @param {string} email - Email à rechercher
- * @returns {Contact|null} Contact trouvé ou null
- */
 function findContactByEmail(email) {
     try {
-        const contacts = ContactsApp.getContactsByEmailAddress(email);
-        return contacts.length > 0 ? contacts[0] : null;
+        const response = People.People.searchContacts({
+            query: email,
+            readMask: 'names,emailAddresses,phoneNumbers,userDefined,memberships'
+        });
+
+        if (!response.results || response.results.length === 0) {
+            return null;
+        }
+
+        for (const result of response.results) {
+            const person = result.person;
+            if (person.emailAddresses) {
+                for (const emailAddr of person.emailAddresses) {
+                    if (emailAddr.value === email) {
+                        return person;
+                    }
+                }
+            }
+        }
+
+        return null;
+
     } catch (error) {
         logVolunteerError(`Échec recherche contact par email: ${email}`, error);
         return null;
     }
 }
 
-/**
- * Ajoute un contact au groupe "Bénévoles"
- * @param {Contact} contact - Contact à ajouter
- */
-function addToVolunteerGroup(contact) {
+function deleteVolunteerContact(volunteerId) {
     try {
-        const groupName = 'Bénévoles';
-        let group = null;
+        const volunteer = getVolunteerById(volunteerId);
 
-        // Recherche du groupe
-        const groups = ContactsApp.getContactGroups();
-        for (let i = 0; i < groups.length; i++) {
-            if (groups[i].getName() === groupName) {
-                group = groups[i];
-                break;
-            }
+        if (!volunteer) {
+            return {
+                success: false,
+                error: 'Bénévole introuvable'
+            };
         }
 
-        // Création du groupe s'il n'existe pas
-        if (!group) {
-            group = ContactsApp.createContactGroup(groupName);
-            logVolunteerInfo(`Groupe de contacts "${groupName}" créé`);
+        const contact = findContactByEmail(volunteer.email);
+
+        if (!contact) {
+            return {
+                success: false,
+                error: 'Contact Google introuvable'
+            };
         }
 
-        // Ajout du contact au groupe
-        contact.addToGroup(group);
+        People.People.deleteContact(contact.resourceName);
+
+        logVolunteerInfo(`Contact Google supprimé pour ${volunteerId}`);
+
+        return {
+            success: true
+        };
 
     } catch (error) {
-        logVolunteerWarning('Échec ajout contact au groupe', error);
+        logVolunteerError('Échec suppression contact', error);
+        return {
+            success: false,
+            error: error.toString()
+        };
     }
 }
 
-/**
- * Synchronise tous les bénévoles actifs vers Google Contacts
- * @returns {Object} Résultats de la synchronisation
- */
 function syncAllVolunteersToContacts() {
     try {
         const volunteers = getAllVolunteers({ actif: true });
@@ -243,7 +269,6 @@ function syncAllVolunteersToContacts() {
                 });
             }
 
-            // Petit délai pour éviter les quotas
             Utilities.sleep(100);
         });
 
@@ -263,48 +288,6 @@ function syncAllVolunteersToContacts() {
             synced: 0,
             failed: 0,
             errors: [error.toString()]
-        };
-    }
-}
-
-/**
- * Supprime un contact Google pour un bénévole
- * @param {string} volunteerId - ID du bénévole
- * @returns {Object} Résultat de la suppression
- */
-function deleteVolunteerContact(volunteerId) {
-    try {
-        const volunteer = getVolunteerById(volunteerId);
-
-        if (!volunteer) {
-            return {
-                success: false,
-                error: 'Bénévole introuvable'
-            };
-        }
-
-        const contact = findContactByEmail(volunteer.email);
-
-        if (!contact) {
-            return {
-                success: false,
-                error: 'Contact Google introuvable'
-            };
-        }
-
-        ContactsApp.deleteContact(contact);
-
-        logVolunteerInfo(`Contact Google supprimé pour ${volunteerId}`);
-
-        return {
-            success: true
-        };
-
-    } catch (error) {
-        logVolunteerError('Échec suppression contact', error);
-        return {
-            success: false,
-            error: error.toString()
         };
     }
 }

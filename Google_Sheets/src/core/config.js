@@ -4,15 +4,12 @@
  */
 
 const VOLUNTEER_CONFIG = {
-    // 📋 Noms des feuilles
     SHEETS: {
         BENEVOLES: 'benevoles',
         VEHICULES: 'vehicules',
         COUVERTURE: 'couverture',
         DISPONIBILITES: 'disponibilites'
     },
-
-    // 📊 Statuts des bénévoles
     STATUS: {
         RECU: 'Reçu',
         EN_COURS: 'En cours',
@@ -20,33 +17,24 @@ const VOLUNTEER_CONFIG = {
         REJETE: 'Rejeté',
         ARCHIVE: 'Archivé'
     },
-
-    // 📍 Types de couverture géographique
     COVERAGE_TYPES: {
         COLLECTE: 'Collecte',
         LIVRAISON: 'Livraison',
         TRI: 'Tri',
         TIRELIRE: 'Tirelire'
     },
-
-    // ⏱️ Configuration du cache (en secondes)
     CACHE: {
         SHORT: 300,
         MEDIUM: 1800,
         LONG: 3600,
         VERY_LONG: 21600
     },
-
-    // 🌍 Configuration API géographique v5.0
     GEO_API: {
         VERSION: '5.0',
         MAX_DISTANCE: 50
     }
 };
 
-/**
- * 🗂️ Indices de colonnes pour la feuille benevoles (0-based)
- */
 const BENEVOLE_COLUMNS = {
     ID: 0,
     NOM: 1,
@@ -61,18 +49,12 @@ const BENEVOLE_COLUMNS = {
     STATUT: 10
 };
 
-/**
- * 🗂️ Indices de colonnes pour la feuille vehicules (0-based)
- */
 const VEHICULE_COLUMNS = {
     ID: 0,
     TYPE: 1,
     CAPACITE_KG: 2
 };
 
-/**
- * 🗂️ Indices de colonnes pour la feuille couverture (0-based)
- */
 const COUVERTURE_COLUMNS = {
     ID_BENEVOLE: 0,
     ID_QUARTIER: 1,
@@ -81,9 +63,6 @@ const COUVERTURE_COLUMNS = {
     DERNIERE_MAJ: 4
 };
 
-/**
- * 🗂️ Indices de colonnes pour la feuille disponibilites (0-based)
- */
 const DISPONIBILITE_COLUMNS = {
     ID_BENEVOLE: 0,
     DISPONIBILITE: 1,
@@ -92,12 +71,7 @@ const DISPONIBILITE_COLUMNS = {
     DERNIERE_MAJ: 4
 };
 
-/**
- * 📝 Mapping des questions du Google Form vers les champs système
- * Ce mapping facilite la maintenance et permet de modifier facilement les questions du formulaire
- */
 const FORM_FIELD_MAPPING = {
-    // Mapping par mots-clés contenus dans les questions du formulaire
     keywords: {
         'nom': 'nom',
         'prénom': 'prenom',
@@ -113,16 +87,12 @@ const FORM_FIELD_MAPPING = {
         'preferences': 'preferences',
         'livraison': 'preferences'
     },
-
-    // Mapping des valeurs de réponse
     values: {
         'oui': true,
         'non': false,
         'yes': true,
         'no': false
     },
-
-    // Types de véhicules reconnus
     vehicleTypes: {
         'citadine': ['citadine', 'petite voiture', 'petite'],
         'berline': ['berline', 'voiture moyenne', 'moyenne'],
@@ -130,8 +100,6 @@ const FORM_FIELD_MAPPING = {
         'utilitaire': ['utilitaire', 'camionnette', 'fourgon', 'van'],
         'break': ['break', 'familiale']
     },
-
-    // Créneaux de disponibilité standards
     availabilitySlots: [
         'Matin',
         'Après-midi',
@@ -142,9 +110,6 @@ const FORM_FIELD_MAPPING = {
     ]
 };
 
-/**
- * Récupère les propriétés de script du système bénévoles
- */
 function getVolunteerScriptConfig() {
     return {
         geoApiUrl: PropertiesService.getScriptProperties().getProperty('GEO_API_URL'),
@@ -155,9 +120,6 @@ function getVolunteerScriptConfig() {
     };
 }
 
-/**
- * Génère un ID unique pour un bénévole
- */
 function generateVolunteerId() {
     const sheet = SpreadsheetApp.getActiveSpreadsheet()
         .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
@@ -179,14 +141,11 @@ function generateVolunteerId() {
         }
     }
 
-    const newId = `${String(maxId + 1).padStart(4, '0')}`;
+    const newId = `${String(maxId + 1).padStart(3, '0')}`;
     console.log(`Nouvel ID bénévole généré: ${newId}`);
     return newId;
 }
 
-/**
- * Génère un ID unique pour un véhicule
- */
 function generateVehicleId() {
     const sheet = SpreadsheetApp.getActiveSpreadsheet()
         .getSheetByName(VOLUNTEER_CONFIG.SHEETS.VEHICULES);
@@ -208,26 +167,26 @@ function generateVehicleId() {
     return maxId + 1;
 }
 
-/**
- * Formate une date/heure au format ISO
- */
 function formatVolunteerDateTime(date = new Date()) {
-    return Utilities.formatDate(date, Session.getScriptTimeZone(),
-        'yyyy-MM-dd HH:mm:ss');
+    return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
 }
 
-/**
- * Valide un email
- */
+function formatSheetDateTime(date) {
+    if (!date) return '';
+
+    if (typeof date === 'string') {
+        date = new Date(date);
+    }
+
+    return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+}
+
 function isValidVolunteerEmail(email) {
     if (!email) return false;
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
 }
 
-/**
- * Normalise un numéro de téléphone français
- */
 function normalizeVolunteerPhone(phone) {
     if (!phone) return '';
 
@@ -235,7 +194,6 @@ function normalizeVolunteerPhone(phone) {
 
     if (!cleaned) return '';
 
-    // Gestion des différents formats
     let localNumber = '';
 
     if (cleaned.startsWith('0033')) {
@@ -249,37 +207,34 @@ function normalizeVolunteerPhone(phone) {
     } else if (cleaned.length === 10 && cleaned.startsWith('0')) {
         localNumber = cleaned.substring(1);
     } else {
-        logWarning(`Format téléphone non standard: ${phone} -> ${cleaned}`);
+        logVolunteerWarning(`Format téléphone non standard: ${phone} -> ${cleaned}`);
 
         if (cleaned.length >= 9) {
             localNumber = cleaned.slice(-9);
         } else {
-            return cleaned;
+            return `'${cleaned}`;
         }
     }
 
     if (localNumber.length !== 9) {
-        logWarning(`Téléphone invalide (doit faire 9 chiffres): ${phone}`);
+        logVolunteerWarning(`Téléphone invalide (doit faire 9 chiffres): ${phone}`);
 
         if (localNumber.length > 9) {
             localNumber = localNumber.slice(-9);
         } else {
-            return cleaned;
+            return `'${cleaned}`;
         }
     }
 
     const firstDigit = localNumber[0];
     if (!/[1-9]/.test(firstDigit)) {
-        logWarning(`Téléphone invalide - premier chiffre doit être 1-9: ${phone}`);
-        return cleaned;
+        logVolunteerWarning(`Téléphone invalide - premier chiffre doit être 1-9: ${phone}`);
+        return `'${cleaned}`;
     }
 
-    return `+33 ${localNumber[0]} ${localNumber.substring(1, 3)} ${localNumber.substring(3, 5)} ${localNumber.substring(5, 7)} ${localNumber.substring(7, 9)}`;
+    return `'+33 ${localNumber[0]} ${localNumber.substring(1, 3)} ${localNumber.substring(3, 5)} ${localNumber.substring(5, 7)} ${localNumber.substring(7, 9)}`;
 }
 
-/**
- * Log avec timestamp
- */
 function logVolunteerInfo(message, data = null) {
     const timestamp = formatVolunteerDateTime();
     console.log(`[${timestamp}] ℹ️ ${message}`);
@@ -304,9 +259,6 @@ function logVolunteerError(message, error = null) {
     }
 }
 
-/**
- * Récupère une valeur du cache
- */
 function getVolunteerCache(key) {
     try {
         const cache = CacheService.getScriptCache();
@@ -317,9 +269,6 @@ function getVolunteerCache(key) {
     }
 }
 
-/**
- * Définit une valeur dans le cache
- */
 function setVolunteerCache(key, value, ttl) {
     try {
         const cache = CacheService.getScriptCache();
@@ -331,9 +280,6 @@ function setVolunteerCache(key, value, ttl) {
     }
 }
 
-/**
- * Notifie l'administrateur
- */
 function notifyVolunteerAdmin(subject, message) {
     try {
         const config = getVolunteerScriptConfig();
