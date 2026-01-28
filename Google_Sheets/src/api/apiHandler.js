@@ -6,7 +6,7 @@
 /**
  * Handler principal pour les requêtes GET
  */
-function doGetVolunteers(e) {
+function doGet(e) {
     try {
         const action = e.parameter.action;
 

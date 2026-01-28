@@ -1,0 +1,656 @@
+{
+  "info": {
+    "_postman_id": "c90e02e9-8622-42d5-856c-0c92758a47d0",
+    "name": "Volunteer Management API v1.0",
+    "description": "API de gestion des bénévoles en lecture seule.\n\n## 🔐 Authentification\n\nTOUTES les requêtes (sauf ping) nécessitent le paramètre:\n```\napiKey: your-api-key-here\n```\n\n## 📊 Statuts des bénévoles\n\n- **Reçu**: Nouvelle inscription\n- **En cours**: En cours de validation\n- **Validé**: Bénévole approuvé et actif\n- **Rejeté**: Candidature rejetée\n- **Archivé**: Bénévole archivé\n\n## 🔗 Intégration\n\nLes quartiers sont validés via l'API GEO externe.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "15533722",
+    "_collection_link": "https://go.postman.co/collection/15533722-c90e02e9-8622-42d5-856c-0c92758a47d0?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "👥 Volunteers",
+      "item": [
+        {
+          "name": "Récupérer un bénévole",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}?action=getvolunteer&id=1&apiKey={{apiKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "getvolunteer"
+                },
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "ID du bénévole"
+                },
+                {
+                  "key": "apiKey",
+                  "value": "{{apiKey}}"
+                }
+              ]
+            },
+            "description": "Récupère les détails complets d'un bénévole incluant son véhicule si présent."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}?action=getvolunteer&id=001&apiKey={{apiKey}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "action",
+                      "value": "getvolunteer"
+                    },
+                    {
+                      "key": "id",
+                      "value": "001"
+                    },
+                    {
+                      "key": "apiKey",
+                      "value": "{{apiKey}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"id\": \"001\",\n  \"nom\": \"Dupont\",\n  \"prenom\": \"Jean\",\n  \"email\": \"jean.dupont@example.com\",\n  \"telephone\": \"+33 6 12 34 56 78\",\n  \"dateInscription\": \"2026-01-15 14:30:00\",\n  \"actif\": true,\n  \"confiance\": false,\n  \"idVehicule\": 3,\n  \"derniereMaj\": \"2026-01-20 09:15:00\",\n  \"statut\": \"Validé\",\n  \"vehicule\": {\n    \"id\": 3,\n    \"type\": \"Berline\",\n    \"capaciteKg\": 400\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Lister tous les bénévoles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}?action=listvolunteers&apiKey={{apiKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "listvolunteers"
+                },
+                {
+                  "key": "actif",
+                  "value": "true",
+                  "description": "Filtrer par état actif",
+                  "disabled": true
+                },
+                {
+                  "key": "statut",
+                  "value": "Validé",
+                  "description": "Filtrer par statut",
+                  "disabled": true
+                },
+                {
+                  "key": "confiance",
+                  "value": "true",
+                  "description": "Filtrer par confiance",
+                  "disabled": true
+                },
+                {
+                  "key": "apiKey",
+                  "value": "{{apiKey}}"
+                }
+              ]
+            },
+            "description": "Récupère la liste des bénévoles avec filtrage optionnel."
+          },
+          "response": [
+            {
+              "name": "Success - Tous",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}?action=listvolunteers&apiKey={{apiKey}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "action",
+                      "value": "listvolunteers"
+                    },
+                    {
+                      "key": "apiKey",
+                      "value": "{{apiKey}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"count\": 42,\n  \"filters\": {},\n  \"volunteers\": [\n    {\n      \"id\": \"001\",\n      \"nom\": \"Dupont\",\n      \"prenom\": \"Jean\",\n      \"email\": \"jean.dupont@example.com\",\n      \"telephone\": \"+33 6 12 34 56 78\",\n      \"dateInscription\": \"2026-01-15 14:30:00\",\n      \"actif\": true,\n      \"confiance\": false,\n      \"idVehicule\": 3,\n      \"derniereMaj\": \"2026-01-20 09:15:00\",\n      \"statut\": \"Validé\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "Success - Filtrés",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}?action=listvolunteers&actif=true&statut=Validé&apiKey={{apiKey}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "action",
+                      "value": "listvolunteers"
+                    },
+                    {
+                      "key": "actif",
+                      "value": "true"
+                    },
+                    {
+                      "key": "statut",
+                      "value": "Validé"
+                    },
+                    {
+                      "key": "apiKey",
+                      "value": "{{apiKey}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"count\": 28,\n  \"filters\": {\n    \"actif\": true,\n    \"statut\": \"Validé\"\n  },\n  \"volunteers\": []\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Gestion des bénévoles"
+    },
+    {
+      "name": "📅 Availability",
+      "item": [
+        {
+          "name": "Disponibilités d'un bénévole",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}?action=getavailability&volunteerId=001&apiKey={{apiKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "getavailability"
+                },
+                {
+                  "key": "volunteerId",
+                  "value": "001",
+                  "description": "ID du bénévole"
+                },
+                {
+                  "key": "apiKey",
+                  "value": "{{apiKey}}"
+                }
+              ]
+            },
+            "description": "Obtient toutes les disponibilités enregistrées pour un bénévole."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}?action=getavailability&volunteerId=001&apiKey={{apiKey}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "action",
+                      "value": "getavailability"
+                    },
+                    {
+                      "key": "volunteerId",
+                      "value": "001"
+                    },
+                    {
+                      "key": "apiKey",
+                      "value": "{{apiKey}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"volunteerId\": \"001\",\n  \"count\": 3,\n  \"availabilities\": [\n    {\n      \"idBenevole\": \"001\",\n      \"disponibilite\": \"Après-midi\",\n      \"courtDelaiOk\": true,\n      \"remarques\": \"Disponible sauf le mercredi\",\n      \"derniereMaj\": \"2026-01-20 10:00:00\"\n    },\n    {\n      \"idBenevole\": \"001\",\n      \"disponibilite\": \"Week-end\",\n      \"courtDelaiOk\": false,\n      \"remarques\": \"\",\n      \"derniereMaj\": \"2026-01-20 10:00:00\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bénévoles disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}?action=getavailablevolunteers&disponibilite=Après-midi&courtDelaiOnly=true&apiKey={{apiKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "getavailablevolunteers"
+                },
+                {
+                  "key": "disponibilite",
+                  "value": "Après-midi",
+                  "description": "Créneau: Matin, Après-midi, Soirée, Week-end, Semaine, Journée complète"
+                },
+                {
+                  "key": "courtDelaiOnly",
+                  "value": "true",
+                  "description": "Court délai uniquement"
+                },
+                {
+                  "key": "apiKey",
+                  "value": "{{apiKey}}"
+                }
+              ]
+            },
+            "description": "Obtient tous les bénévoles disponibles pour un créneau horaire."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}?action=getavailablevolunteers&disponibilite=Après-midi&courtDelaiOnly=true&apiKey={{apiKey}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "action",
+                      "value": "getavailablevolunteers"
+                    },
+                    {
+                      "key": "disponibilite",
+                      "value": "Après-midi"
+                    },
+                    {
+                      "key": "courtDelaiOnly",
+                      "value": "true"
+                    },
+                    {
+                      "key": "apiKey",
+                      "value": "{{apiKey}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"disponibilite\": \"Après-midi\",\n  \"courtDelaiOnly\": true,\n  \"count\": 12,\n  \"volunteers\": [\n    {\n      \"id\": \"001\",\n      \"nom\": \"Dupont\",\n      \"prenom\": \"Jean\",\n      \"email\": \"jean.dupont@example.com\",\n      \"telephone\": \"+33 6 12 34 56 78\",\n      \"actif\": true,\n      \"statut\": \"Validé\"\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Gestion des disponibilités des bénévoles"
+    },
+    {
+      "name": "🗺️ Coverage",
+      "item": [
+        {
+          "name": "Bénévoles par quartier",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}?action=getvolunteersbyquartier&quartierId=17&apiKey={{apiKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "getvolunteersbyquartier"
+                },
+                {
+                  "key": "quartierId",
+                  "value": "17",
+                  "description": "ID du quartier (GEO API)"
+                },
+                {
+                  "key": "type",
+                  "value": "Livraison",
+                  "description": "Type: Collecte, Livraison, Tri, Tirelire",
+                  "disabled": true
+                },
+                {
+                  "key": "apiKey",
+                  "value": "{{apiKey}}"
+                }
+              ]
+            },
+            "description": "Obtient tous les bénévoles actifs qui couvrent un quartier spécifique."
+          },
+          "response": [
+            {
+              "name": "Success - Tous types",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}?action=getvolunteersbyquartier&quartierId=17&apiKey={{apiKey}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "action",
+                      "value": "getvolunteersbyquartier"
+                    },
+                    {
+                      "key": "quartierId",
+                      "value": "17"
+                    },
+                    {
+                      "key": "apiKey",
+                      "value": "{{apiKey}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"quartierId\": \"17\",\n  \"type\": null,\n  \"count\": 5,\n  \"volunteers\": [\n    {\n      \"id\": \"001\",\n      \"nom\": \"Dupont\",\n      \"prenom\": \"Jean\",\n      \"email\": \"jean.dupont@example.com\",\n      \"actif\": true,\n      \"statut\": \"Validé\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "Success - Type spécifique",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}?action=getvolunteersbyquartier&quartierId=17&type=Livraison&apiKey={{apiKey}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "action",
+                      "value": "getvolunteersbyquartier"
+                    },
+                    {
+                      "key": "quartierId",
+                      "value": "17"
+                    },
+                    {
+                      "key": "type",
+                      "value": "Livraison"
+                    },
+                    {
+                      "key": "apiKey",
+                      "value": "{{apiKey}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"quartierId\": \"17\",\n  \"type\": \"Livraison\",\n  \"count\": 3,\n  \"volunteers\": []\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Couverture géographique des bénévoles"
+    },
+    {
+      "name": "🚗 Vehicles",
+      "item": [
+        {
+          "name": "Liste des véhicules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}?action=getvehicles&apiKey={{apiKey}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "getvehicles"
+                },
+                {
+                  "key": "apiKey",
+                  "value": "{{apiKey}}"
+                }
+              ]
+            },
+            "description": "Récupère la liste complète des véhicules enregistrés."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}?action=getvehicles&apiKey={{apiKey}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "action",
+                      "value": "getvehicles"
+                    },
+                    {
+                      "key": "apiKey",
+                      "value": "{{apiKey}}"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"count\": 5,\n  \"vehicles\": [\n    {\n      \"id\": 1,\n      \"type\": \"Citadine\",\n      \"capaciteKg\": 200\n    },\n    {\n      \"id\": 2,\n      \"type\": \"Berline\",\n      \"capaciteKg\": 400\n    },\n    {\n      \"id\": 3,\n      \"type\": \"SUV\",\n      \"capaciteKg\": 600\n    },\n    {\n      \"id\": 4,\n      \"type\": \"Utilitaire\",\n      \"capaciteKg\": 1000\n    },\n    {\n      \"id\": 5,\n      \"type\": \"Break\",\n      \"capaciteKg\": 500\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Gestion des véhicules"
+    },
+    {
+      "name": "🔧 Utils",
+      "item": [
+        {
+          "name": "Ping - Test connectivité",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}?action=ping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "ping"
+                }
+              ]
+            },
+            "description": "Vérifie que l'API est opérationnelle. Pas d'authentification requise."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}?action=ping",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "action",
+                      "value": "ping"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"status\": \"ok\",\n  \"message\": \"API Bénévoles opérationnelle\",\n  \"version\": \"1.0\",\n  \"timestamp\": \"2026-01-28T10:30:00.000Z\"\n}"
+            }
+          ]
+        }
+      ],
+      "description": "Utilitaires et tests de connectivité"
+    }
+  ],
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "api-key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "xxxx-xxxx-xxxx-xxxx",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "apiKey",
+      "value": ""
+    }
+  ]
+}

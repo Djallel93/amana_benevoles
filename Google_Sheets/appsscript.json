@@ -37,5 +37,9 @@
         "https://www.googleapis.com/auth/contacts",
         "https://www.googleapis.com/auth/userinfo.profile"
     ],
-    "runtimeVersion": "V8"
+    "runtimeVersion": "V8",
+    "webapp": {
+        "executeAs": "USER_DEPLOYING",
+        "access": "ANYONE_ANONYMOUS"
+    }
 }
