@@ -1,8 +1,3 @@
-/**
- * @file volunteer_config.js
- * @description Configuration centrale du système de gestion des bénévoles
- */
-
 const VOLUNTEER_CONFIG = {
     SHEETS: {
         BENEVOLES: 'benevoles',
@@ -52,7 +47,8 @@ const BENEVOLE_COLUMNS = {
 const VEHICULE_COLUMNS = {
     ID: 0,
     TYPE: 1,
-    CAPACITE_KG: 2
+    CAPACITE_KG: 2,
+    NOMBRE_PART_MAX: 3
 };
 
 const COUVERTURE_COLUMNS = {
@@ -124,24 +120,17 @@ function generateVolunteerId() {
     const sheet = SpreadsheetApp.getActiveSpreadsheet()
         .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
 
-    if (!sheet) {
-        throw new Error('Feuille benevoles introuvable');
-    }
+    if (!sheet) throw new Error('Feuille benevoles introuvable');
 
     const data = sheet.getDataRange().getValues();
     let maxId = 0;
 
     for (let i = 1; i < data.length; i++) {
-        const id = data[i][BENEVOLE_COLUMNS.ID];
-        if (id) {
-            const num = parseInt(id);
-            if (!isNaN(num) && num > maxId) {
-                maxId = num;
-            }
-        }
+        const num = parseInt(data[i][BENEVOLE_COLUMNS.ID]);
+        if (!isNaN(num) && num > maxId) maxId = num;
     }
 
-    const newId = `${String(maxId + 1).padStart(3, '0')}`;
+    const newId = String(maxId + 1).padStart(3, '0');
     console.log(`Nouvel ID bénévole généré: ${newId}`);
     return newId;
 }
@@ -150,18 +139,14 @@ function generateVehicleId() {
     const sheet = SpreadsheetApp.getActiveSpreadsheet()
         .getSheetByName(VOLUNTEER_CONFIG.SHEETS.VEHICULES);
 
-    if (!sheet) {
-        throw new Error('Feuille vehicules introuvable');
-    }
+    if (!sheet) throw new Error('Feuille vehicules introuvable');
 
     const data = sheet.getDataRange().getValues();
     let maxId = 0;
 
     for (let i = 1; i < data.length; i++) {
         const id = parseInt(data[i][VEHICULE_COLUMNS.ID]);
-        if (!isNaN(id) && id > maxId) {
-            maxId = id;
-        }
+        if (!isNaN(id) && id > maxId) maxId = id;
     }
 
     return maxId + 1;
@@ -173,25 +158,19 @@ function formatVolunteerDateTime(date = new Date()) {
 
 function formatSheetDateTime(date) {
     if (!date) return '';
-
-    if (typeof date === 'string') {
-        date = new Date(date);
-    }
-
+    if (typeof date === 'string') date = new Date(date);
     return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
 }
 
 function isValidVolunteerEmail(email) {
     if (!email) return false;
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function normalizeVolunteerPhone(phone) {
     if (!phone) return '';
 
     let cleaned = String(phone).trim().replace(/\D/g, '');
-
     if (!cleaned) return '';
 
     let localNumber = '';
@@ -208,26 +187,17 @@ function normalizeVolunteerPhone(phone) {
         localNumber = cleaned.substring(1);
     } else {
         logVolunteerWarning(`Format téléphone non standard: ${phone} -> ${cleaned}`);
-
-        if (cleaned.length >= 9) {
-            localNumber = cleaned.slice(-9);
-        } else {
-            return `'${cleaned}`;
-        }
+        localNumber = cleaned.length >= 9 ? cleaned.slice(-9) : null;
+        if (!localNumber) return `'${cleaned}`;
     }
 
     if (localNumber.length !== 9) {
         logVolunteerWarning(`Téléphone invalide (doit faire 9 chiffres): ${phone}`);
-
-        if (localNumber.length > 9) {
-            localNumber = localNumber.slice(-9);
-        } else {
-            return `'${cleaned}`;
-        }
+        localNumber = localNumber.length > 9 ? localNumber.slice(-9) : null;
+        if (!localNumber) return `'${cleaned}`;
     }
 
-    const firstDigit = localNumber[0];
-    if (!/[1-9]/.test(firstDigit)) {
+    if (!/[1-9]/.test(localNumber[0])) {
         logVolunteerWarning(`Téléphone invalide - premier chiffre doit être 1-9: ${phone}`);
         return `'${cleaned}`;
     }
@@ -236,33 +206,23 @@ function normalizeVolunteerPhone(phone) {
 }
 
 function logVolunteerInfo(message, data = null) {
-    const timestamp = formatVolunteerDateTime();
-    console.log(`[${timestamp}] ℹ️ ${message}`);
-    if (data) {
-        console.log(JSON.stringify(data, null, 2));
-    }
+    console.log(`[${formatVolunteerDateTime()}] ℹ️ ${message}`);
+    if (data) console.log(JSON.stringify(data, null, 2));
 }
 
 function logVolunteerWarning(message, data = null) {
-    const timestamp = formatVolunteerDateTime();
-    console.warn(`[${timestamp}] ⚠️ ${message}`);
-    if (data) {
-        console.warn(JSON.stringify(data, null, 2));
-    }
+    console.warn(`[${formatVolunteerDateTime()}] ⚠️ ${message}`);
+    if (data) console.warn(JSON.stringify(data, null, 2));
 }
 
 function logVolunteerError(message, error = null) {
-    const timestamp = formatVolunteerDateTime();
-    console.error(`[${timestamp}] ❌ ${message}`);
-    if (error) {
-        console.error(error);
-    }
+    console.error(`[${formatVolunteerDateTime()}] ❌ ${message}`);
+    if (error) console.error(error);
 }
 
 function getVolunteerCache(key) {
     try {
-        const cache = CacheService.getScriptCache();
-        return cache.get(key);
+        return CacheService.getScriptCache().get(key);
     } catch (error) {
         logVolunteerWarning(`Cache get failed for key: ${key}`, error);
         return null;
@@ -271,8 +231,7 @@ function getVolunteerCache(key) {
 
 function setVolunteerCache(key, value, ttl) {
     try {
-        const cache = CacheService.getScriptCache();
-        cache.put(key, value, ttl);
+        CacheService.getScriptCache().put(key, value, ttl);
         return true;
     } catch (error) {
         logVolunteerWarning(`Cache set failed for key: ${key}`, error);
@@ -283,9 +242,7 @@ function setVolunteerCache(key, value, ttl) {
 function notifyVolunteerAdmin(subject, message) {
     try {
         const config = getVolunteerScriptConfig();
-        const adminEmail = config.adminEmail;
-
-        if (!adminEmail) {
+        if (!config.adminEmail) {
             logVolunteerWarning('Email admin non configuré');
             return;
         }
@@ -304,9 +261,7 @@ function notifyVolunteerAdmin(subject, message) {
             </head>
             <body>
                 <div class="container">
-                    <div class="header">
-                        <h2>🔔 ${subject}</h2>
-                    </div>
+                    <div class="header"><h2>🔔 ${subject}</h2></div>
                     <div class="content">
                         <p>${message.replace(/\n/g, '<br>')}</p>
                         <hr>
@@ -320,13 +275,12 @@ function notifyVolunteerAdmin(subject, message) {
             </html>`;
 
         MailApp.sendEmail({
-            to: adminEmail,
+            to: config.adminEmail,
             subject: `[Gestion Bénévoles] ${subject}`,
             htmlBody: emailBody
         });
 
         logVolunteerInfo(`Email envoyé à l'admin: ${subject}`);
-
     } catch (error) {
         logVolunteerError('Échec envoi email admin', error);
     }

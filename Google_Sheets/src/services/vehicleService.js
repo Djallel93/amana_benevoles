@@ -1,8 +1,5 @@
 /**
- * @file vehicleService.js
- * @description Vehicle management for volunteers
- *
- * ID TYPE NOTE: Sheet stores IDs as numbers. Always use == or String() coercion.
+ * Vehicle management for volunteers
  */
 
 function getVehicleById(vehicleId) {
@@ -16,14 +13,12 @@ function getVehicleById(vehicleId) {
         const targetId = String(vehicleId).trim();
 
         for (let i = 1; i < data.length; i++) {
-            const row = data[i];
-            if (String(row[VEHICULE_COLUMNS.ID]).trim() === targetId) {
-                return rowToVehicle(row);
+            if (String(data[i][VEHICULE_COLUMNS.ID]).trim() === targetId) {
+                return rowToVehicle(data[i]);
             }
         }
 
         return null;
-
     } catch (error) {
         logVolunteerError(`Failed to get vehicle ${vehicleId}`, error);
         return null;
@@ -45,7 +40,6 @@ function getAllVehicles() {
         }
 
         return vehicles;
-
     } catch (error) {
         logVolunteerError('Failed to get vehicles', error);
         return [];
@@ -76,7 +70,6 @@ function getVolunteersByVehicle(vehicleId) {
         }
 
         return volunteers;
-
     } catch (error) {
         logVolunteerError(`Failed to get volunteers for vehicle ${vehicleId}`, error);
         return [];
@@ -87,6 +80,7 @@ function rowToVehicle(row) {
     return {
         id: row[VEHICULE_COLUMNS.ID],
         type: row[VEHICULE_COLUMNS.TYPE],
-        capaciteKg: row[VEHICULE_COLUMNS.CAPACITE_KG]
+        capaciteKg: row[VEHICULE_COLUMNS.CAPACITE_KG],
+        nombrePartMax: row[VEHICULE_COLUMNS.NOMBRE_PART_MAX] || null
     };
 }
