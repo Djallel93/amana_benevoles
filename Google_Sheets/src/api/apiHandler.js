@@ -1,10 +1,9 @@
 /**
  * @file apiHandler.js
- * @description Read-only HTTP API for volunteer data access
+ * @description Read-only HTTP API for volunteer data access.
  *
  * NOTE: Google Apps Script ContentService does not support custom HTTP status codes.
- * All responses return HTTP 200. Errors are indicated by the presence of an `error`
- * field and a `status` field in the JSON body (e.g. status: 404, status: 401).
+ * All responses return HTTP 200. Errors are indicated by the `status` field in the JSON body.
  */
 
 function doGet(e) {
@@ -70,16 +69,10 @@ function authenticateRequest(e) {
 
 function handleGetVolunteer(e) {
     const id = e.parameter.id;
-
-    if (!id) {
-        return jsonResponse({ status: 400, error: 'Missing parameter: id' });
-    }
+    if (!id) return jsonResponse({ status: 400, error: 'Missing parameter: id' });
 
     const volunteer = getVolunteerById(id);
-
-    if (!volunteer) {
-        return jsonResponse({ status: 404, error: `Volunteer not found: ${id}` });
-    }
+    if (!volunteer) return jsonResponse({ status: 404, error: `Volunteer not found: ${id}` });
 
     if (volunteer.idVehicule) {
         const vehicle = getVehicleById(volunteer.idVehicule);
@@ -92,57 +85,37 @@ function handleGetVolunteer(e) {
 function handleListVolunteers(e) {
     const filters = {};
 
-    if (e.parameter.actif !== undefined) {
-        filters.actif = e.parameter.actif === 'true';
-    }
-    if (e.parameter.statut) {
-        filters.statut = e.parameter.statut;
-    }
-    if (e.parameter.confiance !== undefined) {
-        filters.confiance = e.parameter.confiance === 'true';
-    }
+    if (e.parameter.actif !== undefined) filters.actif = e.parameter.actif === 'true';
+    if (e.parameter.statut) filters.statut = e.parameter.statut;
+    if (e.parameter.confiance !== undefined) filters.confiance = e.parameter.confiance === 'true';
 
     const volunteers = getAllVolunteers(filters);
-
     return jsonResponse({ status: 200, count: volunteers.length, filters, volunteers });
 }
 
 function handleGetAvailability(e) {
     const volunteerId = e.parameter.volunteerId;
-
-    if (!volunteerId) {
-        return jsonResponse({ status: 400, error: 'Missing parameter: volunteerId' });
-    }
+    if (!volunteerId) return jsonResponse({ status: 400, error: 'Missing parameter: volunteerId' });
 
     const availabilities = getVolunteerAvailabilities(volunteerId);
-
     return jsonResponse({ status: 200, volunteerId, count: availabilities.length, availabilities });
 }
 
 function handleGetVolunteersByQuartier(e) {
     const quartierId = e.parameter.quartierId;
+    if (!quartierId) return jsonResponse({ status: 400, error: 'Missing parameter: quartierId' });
+
     const type = e.parameter.type || null;
-
-    if (!quartierId) {
-        return jsonResponse({ status: 400, error: 'Missing parameter: quartierId' });
-    }
-
     const volunteers = getVolunteersByQuartier(quartierId, type);
-
     return jsonResponse({ status: 200, quartierId, type, count: volunteers.length, volunteers });
 }
 
 function handleGetAvailableVolunteers(e) {
     const disponibilite = e.parameter.disponibilite;
-    const courtDelaiOnly = e.parameter.courtDelaiOnly === 'true';
+    if (!disponibilite) return jsonResponse({ status: 400, error: 'Missing parameter: disponibilite' });
 
-    if (!disponibilite) {
-        return jsonResponse({ status: 400, error: 'Missing parameter: disponibilite' });
-    }
-
-    const volunteers = getAvailableVolunteers(disponibilite, courtDelaiOnly);
-
-    return jsonResponse({ status: 200, disponibilite, courtDelaiOnly, count: volunteers.length, volunteers });
+    const volunteers = getAvailableVolunteers(disponibilite);
+    return jsonResponse({ status: 200, disponibilite, count: volunteers.length, volunteers });
 }
 
 function handleGetVehicles(e) {

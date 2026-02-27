@@ -1,9 +1,10 @@
 /**
  * @file volunteerService.js
- * @description CRUD service for volunteer management
+ * @description CRUD service for volunteer management.
  *
- * ID TYPE NOTE: Sheet stores IDs as numbers. The API receives them as strings.
- * All comparisons use String() coercion to prevent === type mismatches.
+ * ID NORMALISATION: Google Sheets stores numeric IDs as numbers (e.g. 3),
+ * while code may generate padded strings ("003"). All comparisons go through
+ * normalizeVolunteerId() which strips leading zeros so 3, "3", and "003" all match.
  */
 
 function createVolunteer(volunteerData) {
@@ -22,36 +23,60 @@ function createVolunteer(volunteerData) {
 
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
-
         if (!sheet) throw new Error('Sheet "benevoles" not found');
 
-        const volunteerId = generateVolunteerId();
-        const now = formatVolunteerDateTime();
-        const normalizedPhone = normalizeVolunteerPhone(volunteerData.telephone);
+        // Lock so concurrent submissions don't generate duplicate IDs
+        const lock = LockService.getScriptLock();
+        const lockStart = new Date();
+        logVolunteerInfo(`[LOCK] Tentative acquisition verrou pour ${volunteerData.email} à ${lockStart.toISOString()}`);
 
-        const row = Array(11).fill('');
-        row[BENEVOLE_COLUMNS.ID] = volunteerId;
-        row[BENEVOLE_COLUMNS.NOM] = volunteerData.nom || '';
-        row[BENEVOLE_COLUMNS.PRENOM] = volunteerData.prenom || '';
-        row[BENEVOLE_COLUMNS.EMAIL] = volunteerData.email || '';
-        row[BENEVOLE_COLUMNS.TELEPHONE] = normalizedPhone;
-        row[BENEVOLE_COLUMNS.DATE_INSCRIPTION] = now;
-        row[BENEVOLE_COLUMNS.ACTIF] = true;
-        row[BENEVOLE_COLUMNS.CONFIANCE] = volunteerData.confiance || false;
-        row[BENEVOLE_COLUMNS.ID_VEHICULE] = volunteerData.id_vehicule || '';
-        row[BENEVOLE_COLUMNS.DERNIERE_MAJ] = now;
-        row[BENEVOLE_COLUMNS.STATUT] = VOLUNTEER_CONFIG.STATUS.RECU;
+        try {
+            lock.waitLock(10000);
+        } catch (e) {
+            logVolunteerError(`[LOCK] Timeout verrou pour ${volunteerData.email}`, e);
+            return { success: false, error: 'Impossible d\'obtenir le verrou (soumission simultanée)' };
+        }
 
-        sheet.appendRow(row);
+        const lockAcquired = new Date();
+        logVolunteerInfo(`[LOCK] Verrou acquis pour ${volunteerData.email} après ${lockAcquired - lockStart}ms`);
+
+        let volunteerId;
+        try {
+            const now = formatVolunteerDateTime();
+            const normalizedPhone = normalizeVolunteerPhone(volunteerData.telephone);
+
+            volunteerId = generateVolunteerId();
+            logVolunteerInfo(`[LOCK] ID généré: ${volunteerId} pour ${volunteerData.email}`);
+
+            const row = Array(11).fill('');
+            row[BENEVOLE_COLUMNS.ID] = volunteerId;
+            row[BENEVOLE_COLUMNS.NOM] = (volunteerData.nom || '').toUpperCase();
+            row[BENEVOLE_COLUMNS.PRENOM] = (volunteerData.prenom || '').replace(/([a-zA-ZÀ-ÿ]+)/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+            row[BENEVOLE_COLUMNS.EMAIL] = volunteerData.email || '';
+            row[BENEVOLE_COLUMNS.TELEPHONE] = normalizedPhone;
+            row[BENEVOLE_COLUMNS.DATE_INSCRIPTION] = now;
+            row[BENEVOLE_COLUMNS.ACTIF] = true;
+            row[BENEVOLE_COLUMNS.CONFIANCE] = volunteerData.confiance || false;
+            row[BENEVOLE_COLUMNS.ID_VEHICULE] = volunteerData.id_vehicule || '';
+            row[BENEVOLE_COLUMNS.DERNIERE_MAJ] = now;
+            row[BENEVOLE_COLUMNS.STATUT] = VOLUNTEER_CONFIG.STATUS.RECU;
+
+            sheet.appendRow(row);
+            SpreadsheetApp.flush();
+            logVolunteerInfo(`[LOCK] Ligne écrite et flush OK pour ${volunteerData.email} (ID: ${volunteerId})`);
+        } finally {
+            lock.releaseLock();
+            logVolunteerInfo(`[LOCK] Verrou libéré pour ${volunteerData.email}`);
+        }
 
         logVolunteerInfo(`Volunteer created: ${volunteerId}`);
 
         notifyVolunteerAdmin(
             'New volunteer registered',
-            `ID: ${volunteerId}\nName: ${volunteerData.nom} ${volunteerData.prenom}\nEmail: ${volunteerData.email}\nPhone: ${normalizedPhone}`
+            `ID: ${volunteerId}\nName: ${volunteerData.nom} ${volunteerData.prenom}\nEmail: ${volunteerData.email}\nPhone: ${volunteerData.telephone}`
         );
 
-        return { success: true, volunteerId };
+        return { success: true, volunteerId: String(volunteerId) };
 
     } catch (error) {
         logVolunteerError('Failed to create volunteer', error);
@@ -63,16 +88,14 @@ function getVolunteerById(volunteerId) {
     try {
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
-
         if (!sheet) throw new Error('Sheet "benevoles" not found');
 
         const data = sheet.getDataRange().getValues();
-        const targetId = String(volunteerId).trim();
+        const targetId = normalizeVolunteerId(volunteerId);
 
         for (let i = 1; i < data.length; i++) {
-            const row = data[i];
-            if (String(row[BENEVOLE_COLUMNS.ID]).trim() === targetId) {
-                return rowToVolunteer(row);
+            if (normalizeVolunteerId(data[i][BENEVOLE_COLUMNS.ID]) === targetId) {
+                return rowToVolunteer(data[i]);
             }
         }
 
@@ -90,15 +113,14 @@ function updateVolunteer(volunteerId, updateData) {
 
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
-
         if (!sheet) throw new Error('Sheet "benevoles" not found');
 
         const data = sheet.getDataRange().getValues();
-        const targetId = String(volunteerId).trim();
+        const targetId = normalizeVolunteerId(volunteerId);
         let targetRow = -1;
 
         for (let i = 1; i < data.length; i++) {
-            if (String(data[i][BENEVOLE_COLUMNS.ID]).trim() === targetId) {
+            if (normalizeVolunteerId(data[i][BENEVOLE_COLUMNS.ID]) === targetId) {
                 targetRow = i + 1;
                 break;
             }
@@ -116,18 +138,13 @@ function updateVolunteer(volunteerId, updateData) {
 
         if (updateData.nom !== undefined) set(BENEVOLE_COLUMNS.NOM, updateData.nom, 'nom');
         if (updateData.prenom !== undefined) set(BENEVOLE_COLUMNS.PRENOM, updateData.prenom, 'prenom');
-
         if (updateData.email !== undefined) {
             if (!isValidVolunteerEmail(updateData.email)) {
                 return { success: false, error: 'Invalid email' };
             }
             set(BENEVOLE_COLUMNS.EMAIL, updateData.email, 'email');
         }
-
-        if (updateData.telephone !== undefined) {
-            set(BENEVOLE_COLUMNS.TELEPHONE, normalizeVolunteerPhone(updateData.telephone), 'telephone');
-        }
-
+        if (updateData.telephone !== undefined) set(BENEVOLE_COLUMNS.TELEPHONE, normalizeVolunteerPhone(updateData.telephone), 'telephone');
         if (updateData.actif !== undefined) set(BENEVOLE_COLUMNS.ACTIF, updateData.actif, 'actif');
         if (updateData.confiance !== undefined) set(BENEVOLE_COLUMNS.CONFIANCE, updateData.confiance, 'confiance');
         if (updateData.id_vehicule !== undefined) set(BENEVOLE_COLUMNS.ID_VEHICULE, updateData.id_vehicule, 'vehicule');
@@ -136,7 +153,6 @@ function updateVolunteer(volunteerId, updateData) {
         sheet.getRange(targetRow, BENEVOLE_COLUMNS.DERNIERE_MAJ + 1).setValue(formatVolunteerDateTime());
 
         logVolunteerInfo(`Volunteer ${volunteerId} updated: ${changes.join(', ')}`);
-
         return { success: true, changes };
 
     } catch (error) {
@@ -149,7 +165,6 @@ function getAllVolunteers(filters = {}) {
     try {
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
-
         if (!sheet) throw new Error('Sheet "benevoles" not found');
 
         const data = sheet.getDataRange().getValues();
@@ -157,11 +172,9 @@ function getAllVolunteers(filters = {}) {
 
         for (let i = 1; i < data.length; i++) {
             const row = data[i];
-
             if (filters.actif !== undefined && row[BENEVOLE_COLUMNS.ACTIF] !== filters.actif) continue;
             if (filters.statut && row[BENEVOLE_COLUMNS.STATUT] !== filters.statut) continue;
             if (filters.confiance !== undefined && row[BENEVOLE_COLUMNS.CONFIANCE] !== filters.confiance) continue;
-
             volunteers.push(rowToVolunteer(row));
         }
 
@@ -177,7 +190,6 @@ function findVolunteerByEmail(email) {
     try {
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
-
         if (!sheet) return null;
 
         const data = sheet.getDataRange().getValues();
@@ -205,12 +217,10 @@ function findVolunteerByEmail(email) {
 
 function validateVolunteerData(data) {
     const errors = [];
-
     if (!data.nom || data.nom.trim() === '') errors.push('Nom required');
     if (!data.prenom || data.prenom.trim() === '') errors.push('Prénom required');
     if (!data.email || !isValidVolunteerEmail(data.email)) errors.push('Valid email required');
     if (!data.telephone) errors.push('Téléphone required');
-
     return { isValid: errors.length === 0, errors };
 }
 

@@ -62,9 +62,8 @@ const COUVERTURE_COLUMNS = {
 const DISPONIBILITE_COLUMNS = {
     ID_BENEVOLE: 0,
     DISPONIBILITE: 1,
-    COURT_DELAI_OK: 2,
-    REMARQUES: 3,
-    DERNIERE_MAJ: 4
+    REMARQUES: 2,
+    DERNIERE_MAJ: 3
 };
 
 const FORM_FIELD_MAPPING = {
@@ -96,13 +95,15 @@ const FORM_FIELD_MAPPING = {
         'utilitaire': ['utilitaire', 'camionnette', 'fourgon', 'van'],
         'break': ['break', 'familiale']
     },
+    // Keep in sync with actual form answer values
     availabilitySlots: [
         'Matin',
         'Après-midi',
         'Soirée',
         'Week-end',
         'Semaine',
-        'Journée complète'
+        'Journée complète',
+        'Toute la journée'
     ]
 };
 
@@ -117,22 +118,34 @@ function getVolunteerScriptConfig() {
 }
 
 function generateVolunteerId() {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet()
-        .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
+    // Uses PropertiesService as an atomic counter — immune to sheet read caching.
+    // The LockService in volunteerService.js ensures only one execution enters here at a time.
+    // On first ever call (counter = 0), seeds from the actual sheet max to stay in sync.
+    const props = PropertiesService.getScriptProperties();
+    let counter = parseInt(props.getProperty('volunteer_id_counter') || '0');
 
-    if (!sheet) throw new Error('Feuille benevoles introuvable');
-
-    const data = sheet.getDataRange().getValues();
-    let maxId = 0;
-
-    for (let i = 1; i < data.length; i++) {
-        const num = parseInt(data[i][BENEVOLE_COLUMNS.ID]);
-        if (!isNaN(num) && num > maxId) maxId = num;
+    if (counter === 0) {
+        const sheet = SpreadsheetApp.getActiveSpreadsheet()
+            .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
+        if (sheet) {
+            const data = sheet.getDataRange().getValues();
+            for (let i = 1; i < data.length; i++) {
+                const num = parseInt(data[i][BENEVOLE_COLUMNS.ID]);
+                if (!isNaN(num) && num > counter) counter = num;
+            }
+        }
     }
 
-    const newId = String(maxId + 1).padStart(3, '0');
+    const newId = counter + 1;
+    props.setProperty('volunteer_id_counter', String(newId));
     console.log(`Nouvel ID bénévole généré: ${newId}`);
     return newId;
+}
+
+// Normalises volunteer IDs for comparison: strips leading zeros so "003", 3, and "3" all match.
+function normalizeVolunteerId(id) {
+    const n = parseInt(id);
+    return isNaN(n) ? String(id).trim() : String(n);
 }
 
 function generateVehicleId() {

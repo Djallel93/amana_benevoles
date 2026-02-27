@@ -1,100 +1,57 @@
 /**
  * @file availabilityService.js
- * @description Gestion des disponibilités des bénévoles
+ * @description Gestion des disponibilités des bénévoles.
+ *
+ * Sheet columns: id_benevole | disponibilites | remarques | derniere_maj
  */
 
-/**
- * Ajoute ou met à jour une disponibilité pour un bénévole
- * @param {string} volunteerId - ID du bénévole
- * @param {string} disponibilite - Créneau de disponibilité
- * @param {boolean} courtDelaiOk - Accepte les demandes à court délai
- * @param {string} remarques - Remarques optionnelles
- * @returns {Object} {success: boolean, error?: string}
- */
-function setVolunteerAvailability(volunteerId, disponibilite, courtDelaiOk = false, remarques = '') {
+function setVolunteerAvailability(volunteerId, disponibilite, remarques = '') {
     try {
-        logVolunteerInfo(`Définition disponibilité pour ${volunteerId}`, {
-            disponibilite: disponibilite,
-            courtDelaiOk: courtDelaiOk
-        });
-
-        // Vérification que le bénévole existe
         const volunteer = getVolunteerById(volunteerId);
         if (!volunteer) {
-            return {
-                success: false,
-                error: `Bénévole ${volunteerId} introuvable`
-            };
+            return { success: false, error: `Bénévole ${volunteerId} introuvable` };
         }
 
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
+        if (!sheet) throw new Error('Feuille disponibilites introuvable');
 
-        if (!sheet) {
-            throw new Error('Feuille disponibilites introuvable');
-        }
-
-        // Vérification si la disponibilité existe déjà
         const existing = findVolunteerAvailability(volunteerId, disponibilite);
-
         if (existing) {
-            // Mise à jour
-            return updateVolunteerAvailability(volunteerId, disponibilite, courtDelaiOk, remarques);
+            return updateVolunteerAvailability(volunteerId, disponibilite, remarques);
         }
 
-        // Création
-        const now = formatVolunteerDateTime();
-
-        const row = [
+        sheet.appendRow([
             volunteerId,
             disponibilite,
-            courtDelaiOk,
             remarques,
-            now
-        ];
-
-        sheet.appendRow(row);
+            formatVolunteerDateTime()
+        ]);
 
         logVolunteerInfo(`Disponibilité ajoutée pour ${volunteerId}: ${disponibilite}`);
-
-        return {
-            success: true
-        };
+        return { success: true };
 
     } catch (error) {
         logVolunteerError('Échec ajout disponibilité', error);
-        return {
-            success: false,
-            error: error.toString()
-        };
+        return { success: false, error: error.toString() };
     }
 }
 
-/**
- * Récupère toutes les disponibilités d'un bénévole
- * @param {string} volunteerId - ID du bénévole
- * @returns {Array} Liste des disponibilités
- */
 function getVolunteerAvailabilities(volunteerId) {
     try {
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
-
-        if (!sheet) {
-            throw new Error('Feuille disponibilites introuvable');
-        }
+        if (!sheet) throw new Error('Feuille disponibilites introuvable');
 
         const data = sheet.getDataRange().getValues();
         const availabilities = [];
 
         for (let i = 1; i < data.length; i++) {
             const row = data[i];
-
-            if (row[DISPONIBILITE_COLUMNS.ID_BENEVOLE] === volunteerId) {
+            if (normalizeVolunteerId(row[DISPONIBILITE_COLUMNS.ID_BENEVOLE]) === normalizeVolunteerId(volunteerId)) {
                 availabilities.push({
                     idBenevole: row[DISPONIBILITE_COLUMNS.ID_BENEVOLE],
                     disponibilite: row[DISPONIBILITE_COLUMNS.DISPONIBILITE],
-                    courtDelaiOk: row[DISPONIBILITE_COLUMNS.COURT_DELAI_OK],
                     remarques: row[DISPONIBILITE_COLUMNS.REMARQUES],
                     derniereMaj: row[DISPONIBILITE_COLUMNS.DERNIERE_MAJ]
                 });
@@ -109,39 +66,26 @@ function getVolunteerAvailabilities(volunteerId) {
     }
 }
 
-/**
- * Récupère tous les bénévoles disponibles pour un créneau
- * @param {string} disponibilite - Créneau de disponibilité
- * @param {boolean} courtDelaiOnly - Ne retourner que ceux qui acceptent le court délai
- * @returns {Array} Liste des bénévoles disponibles
- */
-function getAvailableVolunteers(disponibilite, courtDelaiOnly = false) {
+function getAvailableVolunteers(disponibilite) {
     try {
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
-
-        if (!sheet) {
-            throw new Error('Feuille disponibilites introuvable');
-        }
+        if (!sheet) throw new Error('Feuille disponibilites introuvable');
 
         const data = sheet.getDataRange().getValues();
         const volunteerIds = new Set();
 
         for (let i = 1; i < data.length; i++) {
             const row = data[i];
-
             if (row[DISPONIBILITE_COLUMNS.DISPONIBILITE] === disponibilite) {
-                if (!courtDelaiOnly || row[DISPONIBILITE_COLUMNS.COURT_DELAI_OK] === true) {
-                    volunteerIds.add(row[DISPONIBILITE_COLUMNS.ID_BENEVOLE]);
-                }
+                volunteerIds.add(row[DISPONIBILITE_COLUMNS.ID_BENEVOLE]);
             }
         }
 
-        // Récupération des détails des bénévoles
         const volunteers = [];
         volunteerIds.forEach(volunteerId => {
             const volunteer = getVolunteerById(volunteerId);
-            if (volunteer && volunteer.actif && volunteer.statut === VOLUNTEER_CONFIG.STATUS.VALIDE) {
+            if (volunteer?.actif && volunteer.statut === VOLUNTEER_CONFIG.STATUS.VALIDE) {
                 volunteers.push(volunteer);
             }
         });
@@ -154,84 +98,46 @@ function getAvailableVolunteers(disponibilite, courtDelaiOnly = false) {
     }
 }
 
-/**
- * Supprime une disponibilité spécifique
- * @param {string} volunteerId - ID du bénévole
- * @param {string} disponibilite - Créneau de disponibilité
- * @returns {Object} {success: boolean, error?: string}
- */
 function removeVolunteerAvailability(volunteerId, disponibilite) {
     try {
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
-
-        if (!sheet) {
-            throw new Error('Feuille disponibilites introuvable');
-        }
+        if (!sheet) throw new Error('Feuille disponibilites introuvable');
 
         const data = sheet.getDataRange().getValues();
-        let targetRow = -1;
 
         for (let i = 1; i < data.length; i++) {
-            const row = data[i];
-
-            if (row[DISPONIBILITE_COLUMNS.ID_BENEVOLE] === volunteerId &&
-                row[DISPONIBILITE_COLUMNS.DISPONIBILITE] === disponibilite) {
-                targetRow = i + 1;
-                break;
+            if (String(data[i][DISPONIBILITE_COLUMNS.ID_BENEVOLE]).trim() === String(volunteerId).trim() &&
+                data[i][DISPONIBILITE_COLUMNS.DISPONIBILITE] === disponibilite) {
+                sheet.deleteRow(i + 1);
+                logVolunteerInfo(`Disponibilité supprimée: ${volunteerId} - ${disponibilite}`);
+                return { success: true };
             }
         }
 
-        if (targetRow === -1) {
-            return {
-                success: false,
-                error: 'Disponibilité introuvable'
-            };
-        }
-
-        sheet.deleteRow(targetRow);
-
-        logVolunteerInfo(`Disponibilité supprimée: ${volunteerId} - ${disponibilite}`);
-
-        return {
-            success: true
-        };
+        return { success: false, error: 'Disponibilité introuvable' };
 
     } catch (error) {
         logVolunteerError('Échec suppression disponibilité', error);
-        return {
-            success: false,
-            error: error.toString()
-        };
+        return { success: false, error: error.toString() };
     }
 }
 
-/**
- * Trouve une disponibilité spécifique
- * @param {string} volunteerId - ID du bénévole
- * @param {string} disponibilite - Créneau de disponibilité
- * @returns {Object|null} Disponibilité ou null
- */
 function findVolunteerAvailability(volunteerId, disponibilite) {
     try {
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
-
-        if (!sheet) {
-            return null;
-        }
+        if (!sheet) return null;
 
         const data = sheet.getDataRange().getValues();
 
         for (let i = 1; i < data.length; i++) {
             const row = data[i];
-
-            if (row[DISPONIBILITE_COLUMNS.ID_BENEVOLE] === volunteerId &&
+            if (normalizeVolunteerId(row[DISPONIBILITE_COLUMNS.ID_BENEVOLE]) === normalizeVolunteerId(volunteerId) &&
                 row[DISPONIBILITE_COLUMNS.DISPONIBILITE] === disponibilite) {
                 return {
                     idBenevole: row[DISPONIBILITE_COLUMNS.ID_BENEVOLE],
                     disponibilite: row[DISPONIBILITE_COLUMNS.DISPONIBILITE],
-                    courtDelaiOk: row[DISPONIBILITE_COLUMNS.COURT_DELAI_OK],
                     remarques: row[DISPONIBILITE_COLUMNS.REMARQUES],
                     derniereMaj: row[DISPONIBILITE_COLUMNS.DERNIERE_MAJ]
                 };
@@ -246,57 +152,28 @@ function findVolunteerAvailability(volunteerId, disponibilite) {
     }
 }
 
-/**
- * Met à jour une disponibilité existante
- * @param {string} volunteerId - ID du bénévole
- * @param {string} disponibilite - Créneau de disponibilité
- * @param {boolean} courtDelaiOk - Accepte les demandes à court délai
- * @param {string} remarques - Remarques
- * @returns {Object} {success: boolean, error?: string}
- */
-function updateVolunteerAvailability(volunteerId, disponibilite, courtDelaiOk, remarques) {
+function updateVolunteerAvailability(volunteerId, disponibilite, remarques) {
     try {
         const sheet = SpreadsheetApp.getActiveSpreadsheet()
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
-
-        if (!sheet) {
-            throw new Error('Feuille disponibilites introuvable');
-        }
+        if (!sheet) throw new Error('Feuille disponibilites introuvable');
 
         const data = sheet.getDataRange().getValues();
-        let targetRow = -1;
 
         for (let i = 1; i < data.length; i++) {
-            const row = data[i];
-
-            if (row[DISPONIBILITE_COLUMNS.ID_BENEVOLE] === volunteerId &&
-                row[DISPONIBILITE_COLUMNS.DISPONIBILITE] === disponibilite) {
-                targetRow = i + 1;
-                break;
+            if (String(data[i][DISPONIBILITE_COLUMNS.ID_BENEVOLE]).trim() === String(volunteerId).trim() &&
+                data[i][DISPONIBILITE_COLUMNS.DISPONIBILITE] === disponibilite) {
+                const targetRow = i + 1;
+                sheet.getRange(targetRow, DISPONIBILITE_COLUMNS.REMARQUES + 1).setValue(remarques);
+                sheet.getRange(targetRow, DISPONIBILITE_COLUMNS.DERNIERE_MAJ + 1).setValue(formatVolunteerDateTime());
+                return { success: true };
             }
         }
 
-        if (targetRow === -1) {
-            return {
-                success: false,
-                error: 'Disponibilité introuvable'
-            };
-        }
-
-        const now = formatVolunteerDateTime();
-        sheet.getRange(targetRow, DISPONIBILITE_COLUMNS.COURT_DELAI_OK + 1).setValue(courtDelaiOk);
-        sheet.getRange(targetRow, DISPONIBILITE_COLUMNS.REMARQUES + 1).setValue(remarques);
-        sheet.getRange(targetRow, DISPONIBILITE_COLUMNS.DERNIERE_MAJ + 1).setValue(now);
-
-        return {
-            success: true
-        };
+        return { success: false, error: 'Disponibilité introuvable' };
 
     } catch (error) {
         logVolunteerError('Échec mise à jour disponibilité', error);
-        return {
-            success: false,
-            error: error.toString()
-        };
+        return { success: false, error: error.toString() };
     }
 }

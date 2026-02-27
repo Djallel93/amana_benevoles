@@ -293,7 +293,7 @@
                 {
                   "key": "disponibilite",
                   "value": "Après-midi",
-                  "description": "Créneau: Matin, Après-midi, Soirée, Week-end, Semaine, Journée complète"
+                  "description": "Créneau: Matin, Après-midi, Soir, Week-end, Semaine, Journée complète"
                 },
                 {
                   "key": "courtDelaiOnly",
