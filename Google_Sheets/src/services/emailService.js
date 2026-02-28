@@ -323,3 +323,60 @@ function sendReminderEmail(volunteerId, eventDetails) {
         };
     }
 }
+
+/**
+ * @file emailService.js
+ * @description Email notifications for volunteer lifecycle events.
+ *
+ * Setup:
+ *   1. Upload your logo to Google Drive
+ *   2. Run publishLogoToDrive() once to make it public and get the URL
+ *   3. Paste the URL into LOGO_DRIVE_URL below
+ *
+ * Placeholders:  {{PRENOM}}, {{NOM}}, {{LOGO_URL}}
+ */
+
+// ── Paste your Drive URL here after running publishLogoToDrive() ──────────────
+const LOGO_DRIVE_URL = 'https://drive.google.com/uc?export=view&id=1Q38TuXUvIQyibVGxAlifp5KAbBw20kDe';
+// ─────────────────────────────────────────────────────────────────────────────
+
+function sendWelcomeEmail(volunteer) {
+    try {
+        const subject = '✦ Bienvenue chez AMANA — Candidature validée';
+        const html    = buildWelcomeEmailHtml(volunteer.prenom || '', volunteer.nom || '');
+
+        GmailApp.sendEmail(volunteer.email, subject, '', { htmlBody: html });
+        logVolunteerInfo(`Email de bienvenue envoyé à ${volunteer.email}`);
+
+    } catch (error) {
+        logVolunteerError(`Échec envoi email de bienvenue à ${volunteer.email}`, error);
+    }
+}
+
+function buildWelcomeEmailHtml(prenom, nom) {
+    const template = HtmlService.createHtmlOutputFromFile('views/email/welcomeTemplate').getContent();
+    return template
+        .replace(/{{PRENOM}}/g,   prenom)
+        .replace(/{{NOM}}/g,      nom)
+        .replace(/{{LOGO_URL}}/g, LOGO_DRIVE_URL);
+}
+
+/**
+ * Run once to make your logo publicly readable and log its URL.
+ * Copy the logged URL into LOGO_DRIVE_URL above.
+ */
+function publishLogoToDrive() {
+    const fileName = 'logoAMANA.png'; // adjust if needed
+    const files = DriveApp.getFilesByName(fileName);
+
+    if (!files.hasNext()) {
+        Logger.log(`❌ Fichier "${fileName}" introuvable dans Drive`);
+        return;
+    }
+
+    const file = files.next();
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    const url = `https://drive.google.com/uc?export=view&id=${file.getId()}`;
+    Logger.log(`✅ Logo URL (copiez dans LOGO_DRIVE_URL) :\n${url}`);
+}

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>Bienvenue — AMANA</title>
+    <style>
+        /* ── Force light mode ── */
+        :root {
+            color-scheme: light only;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #ffffff !important;
+            font-family: 'Jost', Helvetica, sans-serif;
+            color: #1a3016;
+            -webkit-font-smoothing: antialiased;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Arabic font stack — uses system fonts present on all major OS */
+        .arabic {
+            font-family: 'Amiri', 'Traditional Arabic', 'Scheherazade New', 'Scheherazade', 'Arabic Typesetting', 'Noto Naskh Arabic', serif;
+        }
+
+        /* Cormorant Garamond fallback chain */
+        .serif {
+            font-family: 'Cormorant Garamond', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+        }
+
+        .shell {
+            background-color: #ffffff;
+            padding: 32px 16px 48px;
+        }
+
+        .wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+
+        /* ── Pre-header ── */
+        .pre-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* ── Header ── */
+        .header {
+            background: linear-gradient(160deg, #eef8e6 0%, #e2f4d4 60%, #d8f0c4 100%);
+            border: 1px solid #c0df98;
+            border-radius: 16px 16px 0 0;
+            padding: 44px 32px 40px;
+            text-align: center;
+        }
+
+        .bismillah {
+            font-size: 30px;
+            color: #3a9e2e;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            direction: rtl;
+            line-height: 1.6;
+        }
+
+        .logo-wrap {
+            margin-bottom: 20px;
+        }
+
+        .amana-title {
+            font-size: 40px;
+            font-weight: 600;
+            color: #1a3016;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .amana-title span {
+            color: #3cb832;
+        }
+
+        .amana-subtitle {
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #3a9e2e;
+            font-weight: 500;
+            padding: 0 16px;
+            line-height: 1.6;
+            margin-bottom: 24px;
+        }
+
+        .salam {
+            font-size: 25px;
+            font-weight: 700;
+            color: #1a3016;
+            direction: rtl;
+            line-height: 1.5;
+        }
+
+        /* ── Stripe ── */
+        .stripe {
+            height: 5px;
+            background: repeating-linear-gradient(90deg,
+                    #2d8022 0px, #2d8022 8px,
+                    #3a9e2e 8px, #3a9e2e 10px,
+                    #4ab83e 10px, #4ab83e 12px,
+                    #3a9e2e 12px, #3a9e2e 14px,
+                    #2d8022 14px, #2d8022 22px,
+                    #ffffff 22px, #ffffff 28px);
+        }
+
+        /* ── Body ── */
+        .body {
+            background-color: #ffffff;
+            border-left: 1px solid #cce8b0;
+            border-right: 1px solid #cce8b0;
+            padding: 40px 32px;
+        }
+
+        .greeting {
+            font-size: 26px;
+            font-weight: 600;
+            color: #1a3016;
+            margin-bottom: 20px;
+            line-height: 1.35;
+        }
+
+        .greeting em {
+            color: #3cb832;
+            font-style: italic;
+        }
+
+        .body-text {
+            font-size: 15px;
+            line-height: 1.85;
+            color: #2e4a2a;
+            font-weight: 300;
+            margin-bottom: 18px;
+            text-align: justify;
+        }
+
+        .body-text strong {
+            color: #1a6e14;
+            font-weight: 500;
+        }
+
+        /* ── Hadith block ── */
+        .hadith-wrap {
+            margin: 36px 0;
+        }
+
+        .hadith-label {
+            font-size: 10px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: #3a9e2e;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+
+        .hadith-card {
+            background: linear-gradient(160deg, #f0f9e8, #e8f5d8);
+            border: 1px solid #c0df98;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .hadith-arabic {
+            padding: 28px 28px 20px;
+            text-align: justify;
+            direction: rtl;
+            border-bottom: 1px solid #c8e4a8;
+        }
+
+        .hadith-arabic p {
+            font-size: 25px;
+            line-height: 2.1;
+            color: #1a5c14;
+            font-weight: 400;
+        }
+
+        .hadith-french {
+            padding: 20px 28px 24px;
+            border-bottom: 1px solid #c8e4a8;
+        }
+
+        .hadith-french p {
+            font-style: italic;
+            text-align: justify;
+            font-size: 16px;
+            line-height: 1.85;
+            color: #1e5c18;
+            font-weight: 300;
+        }
+
+        .hadith-source {
+            padding: 14px 28px;
+        }
+
+        .hadith-source p {
+            font-size: 12px;
+            color: #3a9e2e;
+            letter-spacing: 0.3px;
+        }
+
+        .hadith-source strong {
+            color: #2d8022;
+            font-weight: 500;
+        }
+
+        /* ── Closing ── */
+        .jazakum {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .jazakum-arabic {
+            font-size: 39px;
+            font-weight: 700;
+            color: #2d8022;
+            direction: rtl;
+            line-height: 1.6;
+        }
+
+        /* ── Footer ── */
+        .footer {
+            background: linear-gradient(160deg, #eaf6dd, #e0f2cc);
+            border: 1px solid #c0df98;
+            border-top: none;
+            border-radius: 0 0 16px 16px;
+            padding: 28px 32px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            color: #3cb832;
+            margin-bottom: 12px;
+        }
+
+        .footer p {
+            font-size: 5px;
+            color: #3a7830;
+            line-height: 1.9;
+            font-weight: 300;
+        }
+
+        .footer a {
+            color: #2d8022;
+            text-decoration: none;
+        }
+
+        /* ══════════════════════════════════════
+            MOBILE
+        ══════════════════════════════════════ */
+        @media only screen and (max-width: 480px) {
+            .shell {
+                padding: 0;
+            }
+
+            .bismillah {
+                font-size: 23px;
+            }
+
+            .header {
+                padding: 36px 20px 32px;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                border-top: none;
+            }
+
+            .salam {
+                font-size: 18px;
+            }
+
+            .amana-title {
+                font-size: 32px;
+                letter-spacing: 4px;
+            }
+
+            .amana-subtitle {
+                font-size: 9px;
+                letter-spacing: 1px;
+            }
+
+            .body {
+                padding: 28px 20px;
+                border-left: none;
+                border-right: none;
+            }
+
+            .greeting {
+                font-size: 22px;
+            }
+
+            .body-text {
+                font-size: 14px;
+                line-height: 1.8;
+            }
+
+            .hadith-arabic {
+                padding: 20px 16px 16px;
+            }
+
+            .hadith-arabic p {
+                font-size: 21px;
+                line-height: 2;
+            }
+
+            .hadith-french {
+                padding: 16px 16px 20px;
+            }
+
+            .hadith-french p {
+                font-size: 15px;
+            }
+
+            .hadith-source {
+                padding: 9px 16px;
+            }
+
+            .jazakum-arabic {
+                font-size: 32px;
+            }
+
+            .footer {
+                padding: 24px 20px;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                border-bottom: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="shell">
+        <div class="wrapper">
+
+            <!-- Header -->
+            <div class="header">
+
+                <p class="bismillah arabic">بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيمِ</p>
+
+                <div class="logo-wrap">
+                    <img src="{{LOGO_URL}}" alt="AMANA" width="120"
+                        style="display:block; margin:0 auto; max-width:120px; height:auto;" />
+                </div>
+
+                <div class="amana-title serif">AMANA</div>
+                <div class="amana-subtitle">Association Musulmane de l'Agglomération Nantaise et ses Alentours</div>
+
+                <!--
+                    EMAIL-SAFE HEADER DIVIDER — replaces flex + ::before/::after
+                -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                    style="margin-bottom:24px;">
+                    <tr>
+                        <td width="43%" style="border-top:1px solid #3a9e2e; vertical-align:middle;"></td>
+                        <td
+                            style="text-align:center; vertical-align:top; padding:0 5px; white-space:nowrap; color:#3a9e2e; font-size:36px;">
+                            </td>
+                        <td width="43%" style="border-top:1px solid #3a9e2e; vertical-align:middle;"></td>
+                    </tr>
+                </table>
+
+                <p class="salam arabic">السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللهِ وَبَرَكَاتُهُ</p>
+
+            </div>
+
+            <!-- Stripe -->
+            <div class="stripe"></div>
+
+            <!-- Body -->
+            <div class="body">
+
+                <p class="greeting serif">Bienvenue parmi nous,<br><em>{{PRENOM}} {{NOM}}</em>&nbsp;!</p>
+
+                <p class="body-text">
+                    Au nom de toute l'équipe d'<strong>AMANA</strong>, nous avons la joie de vous accueillir
+                    officiellement en tant que bénévole. Votre candidature a été examinée avec soin,
+                    et c'est avec une grande fierté que nous vous comptons désormais parmi nous.
+                </p>
+
+                <p class="body-text">
+                    Votre engagement est une confiance précieuse. Chaque action, aussi petite soit-elle,
+                    porte en elle une immense valeur aux yeux d'Allah. Les familles que vous aiderez,
+                    les livraisons que vous effectuerez, les sourires que vous susciterez&nbsp;: tout
+                    cela s'inscrit dans un acte d'adoration continu.
+                </p>
+
+                <!-- Hadith -->
+                <div class="hadith-wrap">
+                    <p class="hadith-label">✦ &nbsp; Hadith du Prophète ﷺ &nbsp; ✦</p>
+
+                    <div class="hadith-card">
+
+                        <div class="hadith-arabic">
+                            <p class="arabic">
+                                عَنْ أَبِي هُرَيْرَةَ رَضِيَ اللَّهُ عَنْهُ قَالَ:
+                                قَالَ رَسُولُ اللَّهِ ﷺ&nbsp;:<br />
+                                « مَنْ نَفَّسَ عَنْ مُؤْمِنٍ كُرْبَةً مِنْ كُرَبِ الدُّنْيَا،
+                                نَفَّسَ اللَّهُ عَنْهُ كُرْبَةً مِنْ كُرَبِ يَوْمِ الْقِيَامَةِ،
+                                وَمَنْ يَسَّرَ عَلَى مُعْسِرٍ، يَسَّرَ اللَّهُ عَلَيْهِ فِي الدُّنْيَا وَالآخِرَةِ »
+                            </p>
+                        </div>
+
+                        <div class="hadith-french">
+                            <p class="serif">
+                                D'après Abou Houreira (qu'Allah l'agrée), le Prophète (ﷺ) a dit&nbsp;:
+                                « Celui qui soulage un croyant d'une des peines de ce monde,
+                                Allah le soulagera d'une des peines du Jour de la Résurrection.
+                                Et celui qui facilite les choses à une personne dans la gêne,
+                                Allah lui facilitera les choses dans ce monde et dans l'au-delà »
+                            </p>
+                        </div>
+
+                        <div class="hadith-source">
+                            <p>&#9679;&nbsp; Rapporté par <strong>Muslim</strong> — Sahîh Muslim, n°&nbsp;2699</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <p class="body-text">
+                    Que cette parole du Prophète <strong>ﷺ</strong> soit une source de motivation
+                    et de réconfort tout au long de votre engagement. Chaque effort que vous
+                    consentez pour alléger les difficultés d'autrui est une semence plantée pour l'au-delà.
+                </p>
+
+                <!-- EMAIL-SAFE CLOSING DIVIDER -->
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                    style="margin:36px 0 28px;">
+                    <tr>
+                        <td style="border-top:1px solid #cce8b0; vertical-align:middle;">&nbsp;</td>
+                        <td
+                            style="text-align:center; vertical-align:middle; padding:0 16px; white-space:nowrap; color:#3a9e2e; font-size:15px;">
+                            ✦</td>
+                        <td style="border-top:1px solid #cce8b0; vertical-align:middle;">&nbsp;</td>
+                    </tr>
+                </table>
+
+                <div class="jazakum">
+                    <p class="jazakum-arabic arabic">جَزَاكُمُ اللَّهُ خَيْرًا</p>
+                </div>
+
+            </div>
+
+            <div class="footer">
+                <div class="footer-logo serif">AMANA</div>
+                <div style="width:36px; height:1px; background:#bfdf98; margin:0 auto 5px;"></div>
+                <p>
+                    Vous recevez cet email suite à la validation de votre candidature bénévole.<br />
+                    Pour toute question&nbsp;: <a
+                        href="mailto:amana44.benevole@gmail.com">amana44.benevole@gmail.com</a>
+                </p>
+            </div>
+
+        </div>
+    </div>
+</body>
+
+</html>
