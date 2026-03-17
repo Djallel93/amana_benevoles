@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <?!= include('assets/css/volunteer_styles'); ?>
+    <style>
+        /* ── Dialog-specific enhancements ── */
+        body {
+            background: #f4f8f0;
+        }
+
+        .form-container {
+            background: white;
+            border-top: 4px solid #2d8022;
+        }
+
+        h2 {
+            color: #1a3016;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── Mission date/time inputs ── */
+        .mission-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 480px) {
+            .mission-inputs {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .input-card {
+            background: #f7fdf4;
+            border: 1px solid #c8e4a8;
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+
+        .input-card label {
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: #3a9e2e;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .input-card input {
+            border: 1px solid #c0df98;
+            background: white;
+            font-size: 15px;
+            color: #1a3016;
+            border-radius: 6px;
+            padding: 9px 12px;
+        }
+
+        .input-card input:focus {
+            outline: none;
+            border-color: #3a9e2e;
+            box-shadow: 0 0 0 3px rgba(58, 158, 46, 0.12);
+        }
+
+        /* ── Summary panel (shown after preview) ── */
+        .summary-panel {
+            display: none;
+            background: linear-gradient(135deg, #1a3016 0%, #2d5a20 100%);
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin: 16px 0;
+            color: white;
+        }
+
+        .summary-panel.visible {
+            display: block;
+        }
+
+        .summary-label {
+            font-size: 10px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: #7fd468;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+        }
+
+        .summary-row:last-child {
+            border-bottom: none;
+            padding-top: 12px;
+        }
+
+        .summary-key {
+            color: #a8e895;
+            font-weight: 500;
+        }
+
+        .summary-value {
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .summary-count {
+            font-size: 22px;
+            font-weight: 700;
+            color: #7fd468;
+        }
+
+        /* ── Warning note ── */
+        .warning-note {
+            background: #fff8e1;
+            border: 1px solid #ffe082;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #7d5800;
+            margin-top: 14px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        /* ── Buttons ── */
+        .btn-preview {
+            background: #f0f8e8;
+            color: #2d8022;
+            border: 1px solid #c0df98;
+        }
+
+        .btn-preview:hover:not(:disabled) {
+            background: #e2f4d4;
+            border-color: #3a9e2e;
+        }
+
+        .btn-send {
+            background: #2d8022;
+            color: white;
+        }
+
+        .btn-send:hover:not(:disabled) {
+            background: #1a5c14;
+        }
+
+        /* ── Results panel ── */
+        .results-panel {
+            display: none;
+        }
+
+        .results-panel.visible {
+            display: block;
+        }
+
+        .result-stat {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .result-stat:last-child {
+            border-bottom: none;
+        }
+
+        .stat-icon {
+            font-size: 20px;
+            width: 28px;
+            text-align: center;
+        }
+
+        /* Divider */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #c0df98, transparent);
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="form-container">
+        <h2>📋 Briefing Mission</h2>
+
+        <div id="alertBox" class="alert"></div>
+        <div id="loadingBox" class="loading">
+            <div class="spinner"></div>
+            <p id="loadingMsg">Chargement...</p>
+        </div>
+
+        <!-- Step 1: Input form -->
+        <div id="inputSection">
+            <p style="font-size:14px; color:#3a5c30; margin-bottom:18px; font-weight:300;">
+                Renseignez la date et l'heure de rassemblement. Un email de briefing sera envoyé à tous les bénévoles au
+                statut <strong>Validé</strong>.
+            </p>
+
+            <div class="mission-inputs">
+                <div class="input-card">
+                    <label>📅 &nbsp; Date de la mission</label>
+                    <input type="date" id="missionDate" required>
+                </div>
+                <div class="input-card">
+                    <label>⏰ &nbsp; Heure de présence</label>
+                    <input type="time" id="missionTime" required value="08:00">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button type="button" class="btn-secondary" onclick="google.script.host.close()">Annuler</button>
+                <button type="button" class="btn-preview" onclick="handlePreview()">Prévisualiser →</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Confirmation panel -->
+        <div id="confirmSection" style="display:none;">
+
+            <div class="summary-panel visible" id="summaryPanel">
+                <div class="summary-label">✦ &nbsp; Récapitulatif de l'envoi</div>
+                <div class="summary-row">
+                    <span class="summary-key">Date de la mission</span>
+                    <span class="summary-value" id="summaryDate">—</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-key">Heure de rassemblement</span>
+                    <span class="summary-value" id="summaryTime">—</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-key">Destinataires (statut Validé)</span>
+                    <span class="summary-count" id="summaryCount">—</span>
+                </div>
+            </div>
+
+            <div class="warning-note">
+                <span style="font-size:18px;">⚠️</span>
+                <span>Cette action enverra un email à <strong id="warningCount">0</strong> bénévole(s). Cette opération
+                    ne peut pas être annulée.</span>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="button-group">
+                <button type="button" class="btn-secondary" onclick="goBackToInput()">← Modifier</button>
+                <button type="button" class="btn-send" id="sendBtn" onclick="handleSend()">
+                    ✉️ Envoyer les emails
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Results panel -->
+        <div id="resultsSection" style="display:none;">
+            <div id="resultsContent"></div>
+            <div style="margin-top: 20px;">
+                <button type="button" class="btn-primary" style="width:100%;"
+                    onclick="google.script.host.close()">Fermer</button>
+            </div>
+        </div>
+
+    </div>
+
+    <?!= include('assets/js/common'); ?>
+
+    <script>
+        // ── State ──────────────────────────────────────────────────────────
+        let confirmedDate = '';
+        let confirmedTime = '';
+        let confirmedCount = 0;
+
+        // ── Set min date to today ──────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function () {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('missionDate').setAttribute('min', today);
+        });
+
+        // ── Step 1 → 2: Preview ───────────────────────────────────────────
+        function handlePreview() {
+            const dateVal = document.getElementById('missionDate').value;
+            const timeVal = document.getElementById('missionTime').value;
+
+            if (!dateVal) {
+                showAlert('error', '❌ Veuillez sélectionner une date de mission.');
+                return;
+            }
+            if (!timeVal) {
+                showAlert('error', '❌ Veuillez sélectionner une heure de rassemblement.');
+                return;
+            }
+
+            hideAlert();
+            showLoading();
+            document.getElementById('loadingMsg').textContent = 'Comptage des bénévoles validés...';
+
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    hideLoading();
+                    if (!result.success) {
+                        showAlert('error', '❌ ' + result.error);
+                        return;
+                    }
+
+                    confirmedDate = result.dateFormatted;
+                    confirmedTime = result.timeFormatted;
+                    confirmedCount = result.count;
+
+                    // Populate summary
+                    document.getElementById('summaryDate').textContent = confirmedDate;
+                    document.getElementById('summaryTime').textContent = confirmedTime;
+                    document.getElementById('summaryCount').textContent = confirmedCount;
+                    document.getElementById('warningCount').textContent = confirmedCount;
+
+                    // Switch panels
+                    document.getElementById('inputSection').style.display = 'none';
+                    document.getElementById('confirmSection').style.display = 'block';
+                })
+                .withFailureHandler(onError)
+                .previewMissionBriefing(dateVal, timeVal);
+        }
+
+        // ── Step 2 → 1: Back ──────────────────────────────────────────────
+        function goBackToInput() {
+            document.getElementById('confirmSection').style.display = 'none';
+            document.getElementById('inputSection').style.display = 'block';
+            hideAlert();
+        }
+
+        // ── Step 2 → 3: Send ──────────────────────────────────────────────
+        function handleSend() {
+            const dateVal = document.getElementById('missionDate').value;
+            const timeVal = document.getElementById('missionTime').value;
+
+            document.getElementById('sendBtn').disabled = true;
+            showLoading();
+            document.getElementById('loadingMsg').textContent = 'Envoi des emails en cours...';
+
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    hideLoading();
+                    document.getElementById('confirmSection').style.display = 'none';
+
+                    const html = buildResultsHtml(result);
+                    document.getElementById('resultsContent').innerHTML = html;
+                    document.getElementById('resultsSection').style.display = 'block';
+                })
+                .withFailureHandler(function (err) {
+                    hideLoading();
+                    document.getElementById('sendBtn').disabled = false;
+                    onError(err);
+                })
+                .sendMissionBriefing(dateVal, timeVal);
+        }
+
+        // ── Build results HTML ────────────────────────────────────────────
+        function buildResultsHtml(result) {
+            const allOk = result.failed === 0;
+            const headerColor = allOk ? '#34a853' : '#ff9800';
+            const headerIcon = allOk ? '✅' : '⚠️';
+            const headerText = allOk ? 'Emails envoyés avec succès !' : 'Envoi terminé avec des erreurs';
+
+            let errorsHtml = '';
+            if (result.errors && result.errors.length > 0) {
+                errorsHtml = `
+                    <div style="margin-top:16px; background:#fff8e1; border:1px solid #ffe082; border-radius:8px; padding:14px;">
+                        <div style="font-size:12px; font-weight:600; color:#7d5800; margin-bottom:8px; letter-spacing:1px; text-transform:uppercase;">Erreurs détaillées</div>
+                        ${result.errors.map(e => `<div style="font-size:12px; color:#7d5800; padding:4px 0; border-bottom:1px solid #ffe082;">${e.volunteerId} — ${e.error}</div>`).join('')}
+                    </div>`;
+            }
+
+            return `
+                <div style="text-align:center; padding:16px 0 8px;">
+                    <div style="font-size:40px; margin-bottom:8px;">${headerIcon}</div>
+                    <div style="font-size:18px; font-weight:700; color:${headerColor}; margin-bottom:4px;">${headerText}</div>
+                    <div style="font-size:13px; color:#666; margin-bottom:20px;">${confirmedDate} — ${confirmedTime}</div>
+                </div>
+                <div style="border-top:1px solid #eee; padding-top:16px;">
+                    <div class="result-stat">
+                        <span class="stat-icon">✉️</span>
+                        <span style="flex:1; color:#333;">Emails envoyés</span>
+                        <strong style="color:#34a853; font-size:18px;">${result.sent}</strong>
+                    </div>
+                    <div class="result-stat">
+                        <span class="stat-icon">❌</span>
+                        <span style="flex:1; color:#333;">Échecs</span>
+                        <strong style="color:${result.failed > 0 ? '#ea4335' : '#999'}; font-size:18px;">${result.failed}</strong>
+                    </div>
+                    <div class="result-stat">
+                        <span class="stat-icon">📊</span>
+                        <span style="flex:1; color:#333;">Total destinataires</span>
+                        <strong style="color:#333; font-size:18px;">${result.sent + result.failed}</strong>
+                    </div>
+                </div>
+                ${errorsHtml}
+            `;
+        }
+    </script>
+</body>
+
+</html>

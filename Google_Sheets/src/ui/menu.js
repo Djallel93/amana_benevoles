@@ -18,6 +18,7 @@ function onOpenVolunteer() {
         .addItem('✏️ Modifier Bénévole', 'showEditVolunteerDialog')
         .addSeparator()
         .addItem('📧 Demander Disponibilités', 'showRequestAvailabilityDialog')
+        .addItem('📋 Briefing Mission', 'showMissionBriefingDialog')
         .addSeparator()
         .addSubMenu(createSyncMenu(ui))
         .addSubMenu(createImportMenu(ui))
@@ -314,4 +315,16 @@ function testVolunteerGeoApi() {
         : `❌ ${result.message}`;
 
     SpreadsheetApp.getUi().alert('Test API GEO', message, SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Opens the mission briefing dialog.
+ */
+function showMissionBriefingDialog() {
+    const template = HtmlService.createTemplateFromFile('views/volunteer/missionBriefing');
+    const html = template.evaluate()
+        .setWidth(560)
+        .setHeight(480);
+
+    SpreadsheetApp.getUi().showModalDialog(html, '📋 Briefing Mission');
 }
