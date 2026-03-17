@@ -25,7 +25,6 @@ function createVolunteer(volunteerData) {
             .getSheetByName(VOLUNTEER_CONFIG.SHEETS.BENEVOLES);
         if (!sheet) throw new Error('Sheet "benevoles" not found');
 
-        // Lock so concurrent submissions don't generate duplicate IDs
         const lock = LockService.getScriptLock();
         const lockStart = new Date();
         logVolunteerInfo(`[LOCK] Tentative acquisition verrou pour ${volunteerData.email} à ${lockStart.toISOString()}`);
@@ -48,7 +47,7 @@ function createVolunteer(volunteerData) {
             volunteerId = generateVolunteerId();
             logVolunteerInfo(`[LOCK] ID généré: ${volunteerId} pour ${volunteerData.email}`);
 
-            const row = Array(11).fill('');
+            const row = Array(12).fill('');
             row[BENEVOLE_COLUMNS.ID] = volunteerId;
             row[BENEVOLE_COLUMNS.NOM] = (volunteerData.nom || '').toUpperCase();
             row[BENEVOLE_COLUMNS.PRENOM] = (volunteerData.prenom || '').replace(/([a-zA-ZÀ-ÿ]+)/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
@@ -60,6 +59,7 @@ function createVolunteer(volunteerData) {
             row[BENEVOLE_COLUMNS.ID_VEHICULE] = volunteerData.id_vehicule || '';
             row[BENEVOLE_COLUMNS.DERNIERE_MAJ] = now;
             row[BENEVOLE_COLUMNS.STATUT] = VOLUNTEER_CONFIG.STATUS.RECU;
+            row[BENEVOLE_COLUMNS.ADMIN] = volunteerData.admin || false;
 
             sheet.appendRow(row);
             SpreadsheetApp.flush();
@@ -149,6 +149,7 @@ function updateVolunteer(volunteerId, updateData) {
         if (updateData.confiance !== undefined) set(BENEVOLE_COLUMNS.CONFIANCE, updateData.confiance, 'confiance');
         if (updateData.id_vehicule !== undefined) set(BENEVOLE_COLUMNS.ID_VEHICULE, updateData.id_vehicule, 'vehicule');
         if (updateData.statut !== undefined) set(BENEVOLE_COLUMNS.STATUT, updateData.statut, 'statut');
+        if (updateData.admin !== undefined) set(BENEVOLE_COLUMNS.ADMIN, toBoolean(updateData.admin), 'admin');
 
         sheet.getRange(targetRow, BENEVOLE_COLUMNS.DERNIERE_MAJ + 1).setValue(formatVolunteerDateTime());
 
@@ -175,6 +176,7 @@ function getAllVolunteers(filters = {}) {
             if (filters.actif !== undefined && row[BENEVOLE_COLUMNS.ACTIF] !== filters.actif) continue;
             if (filters.statut && row[BENEVOLE_COLUMNS.STATUT] !== filters.statut) continue;
             if (filters.confiance !== undefined && row[BENEVOLE_COLUMNS.CONFIANCE] !== filters.confiance) continue;
+            if (filters.admin !== undefined && toBoolean(row[BENEVOLE_COLUMNS.ADMIN]) !== filters.admin) continue;
             volunteers.push(rowToVolunteer(row));
         }
 
@@ -243,6 +245,7 @@ function rowToVolunteer(row) {
         confiance: row[BENEVOLE_COLUMNS.CONFIANCE],
         idVehicule: row[BENEVOLE_COLUMNS.ID_VEHICULE],
         derniereMaj: row[BENEVOLE_COLUMNS.DERNIERE_MAJ],
-        statut: row[BENEVOLE_COLUMNS.STATUT]
+        statut: row[BENEVOLE_COLUMNS.STATUT],
+        admin: toBoolean(row[BENEVOLE_COLUMNS.ADMIN])
     };
 }

@@ -5,6 +5,36 @@
  * Sheet columns: id_benevole | disponibilites | remarques | derniere_maj
  */
 
+/**
+ * Returns the disponibilites sheet, trying exact name first then accent/case-insensitive fallback.
+ * Logs all available sheet names if not found.
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet|null}
+ */
+function getDisponibilitesSheet() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
+    if (!sheet) {
+        const target = VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+        sheet = ss.getSheets().find(s => {
+            const name = s.getName()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+            return name === target;
+        }) || null;
+    }
+    if (!sheet) {
+        logVolunteerError(
+            `Sheet not found. Configured: "${VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES}". ` +
+            `Available: ${SpreadsheetApp.getActiveSpreadsheet().getSheets().map(s => `"${s.getName()}"`).join(', ')}`
+        );
+    }
+    return sheet;
+}
+
 function setVolunteerAvailability(volunteerId, disponibilite, remarques = '') {
     try {
         const volunteer = getVolunteerById(volunteerId);
@@ -12,8 +42,7 @@ function setVolunteerAvailability(volunteerId, disponibilite, remarques = '') {
             return { success: false, error: `Bénévole ${volunteerId} introuvable` };
         }
 
-        const sheet = SpreadsheetApp.getActiveSpreadsheet()
-            .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
+        const sheet = getDisponibilitesSheet();
         if (!sheet) throw new Error('Feuille disponibilites introuvable');
 
         const existing = findVolunteerAvailability(volunteerId, disponibilite);
@@ -39,16 +68,16 @@ function setVolunteerAvailability(volunteerId, disponibilite, remarques = '') {
 
 function getVolunteerAvailabilities(volunteerId) {
     try {
-        const sheet = SpreadsheetApp.getActiveSpreadsheet()
-            .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
-        if (!sheet) throw new Error('Feuille disponibilites introuvable');
+        const sheet = getDisponibilitesSheet();
+        if (!sheet) return [];
 
         const data = sheet.getDataRange().getValues();
         const availabilities = [];
+        const normalizedTarget = normalizeVolunteerId(volunteerId);
 
         for (let i = 1; i < data.length; i++) {
             const row = data[i];
-            if (normalizeVolunteerId(row[DISPONIBILITE_COLUMNS.ID_BENEVOLE]) === normalizeVolunteerId(volunteerId)) {
+            if (normalizeVolunteerId(row[DISPONIBILITE_COLUMNS.ID_BENEVOLE]) === normalizedTarget) {
                 availabilities.push({
                     idBenevole: row[DISPONIBILITE_COLUMNS.ID_BENEVOLE],
                     disponibilite: row[DISPONIBILITE_COLUMNS.DISPONIBILITE],
@@ -68,8 +97,7 @@ function getVolunteerAvailabilities(volunteerId) {
 
 function getAvailableVolunteers(disponibilite) {
     try {
-        const sheet = SpreadsheetApp.getActiveSpreadsheet()
-            .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
+        const sheet = getDisponibilitesSheet();
         if (!sheet) throw new Error('Feuille disponibilites introuvable');
 
         const data = sheet.getDataRange().getValues();
@@ -100,14 +128,13 @@ function getAvailableVolunteers(disponibilite) {
 
 function removeVolunteerAvailability(volunteerId, disponibilite) {
     try {
-        const sheet = SpreadsheetApp.getActiveSpreadsheet()
-            .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
+        const sheet = getDisponibilitesSheet();
         if (!sheet) throw new Error('Feuille disponibilites introuvable');
 
         const data = sheet.getDataRange().getValues();
 
         for (let i = 1; i < data.length; i++) {
-            if (String(data[i][DISPONIBILITE_COLUMNS.ID_BENEVOLE]).trim() === String(volunteerId).trim() &&
+            if (normalizeVolunteerId(data[i][DISPONIBILITE_COLUMNS.ID_BENEVOLE]) === normalizeVolunteerId(volunteerId) &&
                 data[i][DISPONIBILITE_COLUMNS.DISPONIBILITE] === disponibilite) {
                 sheet.deleteRow(i + 1);
                 logVolunteerInfo(`Disponibilité supprimée: ${volunteerId} - ${disponibilite}`);
@@ -125,8 +152,7 @@ function removeVolunteerAvailability(volunteerId, disponibilite) {
 
 function findVolunteerAvailability(volunteerId, disponibilite) {
     try {
-        const sheet = SpreadsheetApp.getActiveSpreadsheet()
-            .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
+        const sheet = getDisponibilitesSheet();
         if (!sheet) return null;
 
         const data = sheet.getDataRange().getValues();
@@ -154,14 +180,13 @@ function findVolunteerAvailability(volunteerId, disponibilite) {
 
 function updateVolunteerAvailability(volunteerId, disponibilite, remarques) {
     try {
-        const sheet = SpreadsheetApp.getActiveSpreadsheet()
-            .getSheetByName(VOLUNTEER_CONFIG.SHEETS.DISPONIBILITES);
+        const sheet = getDisponibilitesSheet();
         if (!sheet) throw new Error('Feuille disponibilites introuvable');
 
         const data = sheet.getDataRange().getValues();
 
         for (let i = 1; i < data.length; i++) {
-            if (String(data[i][DISPONIBILITE_COLUMNS.ID_BENEVOLE]).trim() === String(volunteerId).trim() &&
+            if (normalizeVolunteerId(data[i][DISPONIBILITE_COLUMNS.ID_BENEVOLE]) === normalizeVolunteerId(volunteerId) &&
                 data[i][DISPONIBILITE_COLUMNS.DISPONIBILITE] === disponibilite) {
                 const targetRow = i + 1;
                 sheet.getRange(targetRow, DISPONIBILITE_COLUMNS.REMARQUES + 1).setValue(remarques);

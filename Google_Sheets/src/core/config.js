@@ -41,7 +41,8 @@ const BENEVOLE_COLUMNS = {
     CONFIANCE: 7,
     ID_VEHICULE: 8,
     DERNIERE_MAJ: 9,
-    STATUT: 10
+    STATUT: 10,
+    ADMIN: 11
 };
 
 const VEHICULE_COLUMNS = {

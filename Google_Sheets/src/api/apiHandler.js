@@ -28,12 +28,13 @@ function doGet(e) {
             case 'getvolunteersbyquartier': return handleGetVolunteersByQuartier(e);
             case 'getavailablevolunteers': return handleGetAvailableVolunteers(e);
             case 'getvehicles': return handleGetVehicles(e);
-            case 'ping': return jsonResponse({
-                status: 200,
-                message: 'API Bénévoles opérationnelle',
-                version: '1.0',
-                timestamp: new Date().toISOString()
-            });
+            case 'ping':
+                return jsonResponse({
+                    status: 200,
+                    message: 'API Bénévoles opérationnelle',
+                    version: '1.0',
+                    timestamp: new Date().toISOString()
+                });
             default:
                 return jsonResponse({ status: 400, error: `Unknown action: ${action}` });
         }
@@ -71,7 +72,7 @@ function handleGetVolunteer(e) {
     const id = e.parameter.id;
     if (!id) return jsonResponse({ status: 400, error: 'Missing parameter: id' });
 
-    const volunteer = getVolunteerById(id);
+    const volunteer = getVolunteerById(normalizeVolunteerId(id));
     if (!volunteer) return jsonResponse({ status: 404, error: `Volunteer not found: ${id}` });
 
     if (volunteer.idVehicule) {
@@ -88,14 +89,17 @@ function handleListVolunteers(e) {
     if (e.parameter.actif !== undefined) filters.actif = e.parameter.actif === 'true';
     if (e.parameter.statut) filters.statut = e.parameter.statut;
     if (e.parameter.confiance !== undefined) filters.confiance = e.parameter.confiance === 'true';
+    if (e.parameter.admin !== undefined) filters.admin = e.parameter.admin === 'true';
 
     const volunteers = getAllVolunteers(filters);
     return jsonResponse({ status: 200, count: volunteers.length, filters, volunteers });
 }
 
 function handleGetAvailability(e) {
-    const volunteerId = e.parameter.volunteerId;
-    if (!volunteerId) return jsonResponse({ status: 400, error: 'Missing parameter: volunteerId' });
+    const rawId = e.parameter.volunteerId;
+    if (!rawId) return jsonResponse({ status: 400, error: 'Missing parameter: volunteerId' });
+
+    const volunteerId = normalizeVolunteerId(rawId);
 
     const availabilities = getVolunteerAvailabilities(volunteerId);
     return jsonResponse({ status: 200, volunteerId, count: availabilities.length, availabilities });
